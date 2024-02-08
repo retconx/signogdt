@@ -123,9 +123,10 @@ class MainWindow(QMainWindow):
             logger.logger.info("Erster Start")
             mb = QMessageBox(QMessageBox.Icon.Question, "Hinweis von SignoGDT", "Vermutlich starten Sie SignoGDT das erste Mal auf diesem PC.\nMöchten Sie jetzt die Grundeinstellungen vornehmen?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             mb.setDefaultButton(QMessageBox.StandardButton.Yes)
-            # if mb.exec() == QMessageBox.StandardButton.Yes:
-            #     self.einstellungenLanrLizenzschluessel(False)
-            #     self.einstellungenGdt(False)
+            if mb.exec() == QMessageBox.StandardButton.Yes:
+                self.einstellungenLanrLizenzschluessel(False)
+                self.einstellungenGdt(False)
+                self.einstellungenAllgemein(False, True)
 
         # Version vergleichen und gegebenenfalls aktualisieren
         configIniBase = configparser.ConfigParser()
@@ -273,17 +274,19 @@ class MainWindow(QMainWindow):
         einstellungenGdtAction = QAction("GDT-Einstellungen", self)
         einstellungenGdtAction.triggered.connect(lambda checked=False, neustartfrage=True: self.einstellungenGdt(checked, True))
         einstellungenErweiterungenAction = QAction("LANR/Lizenzschlüssel", self)
-        einstellungenErweiterungenAction.triggered.connect(lambda checked=False, neustartfrage=True: self.einstellungenLanrLizenzschluessel(checked, True)) # type: ignore
+        einstellungenErweiterungenAction.triggered.connect(lambda checked=False, neustartfrage=True: self.einstellungenLanrLizenzschluessel(checked, True))
         hilfeMenu = menubar.addMenu("Hilfe")
         hilfeWikiAction = QAction("SignoGDT Wiki", self)
-        hilfeWikiAction.triggered.connect(self.signogdtWiki) # type: ignore
+        hilfeWikiAction.triggered.connect(self.signogdtWiki) 
         hilfeUpdateAction = QAction("Auf Update prüfen", self)
-        hilfeUpdateAction.triggered.connect(self.updatePruefung) # type: ignore
+        hilfeUpdateAction.triggered.connect(self.updatePruefung) 
         hilfeUeberAction = QAction("Über SignoGDT", self)
         hilfeUeberAction.setMenuRole(QAction.MenuRole.NoRole)
-        hilfeUeberAction.triggered.connect(self.ueberSignoGdt) # type: ignore
+        hilfeUeberAction.triggered.connect(self.ueberSignoGdt) 
+        hilfeEulaAction = QAction("Lizenzvereinbarung (EULA)", self)
+        hilfeEulaAction.triggered.connect(self.eula) 
         hilfeLogExportieren = QAction("Log-Verzeichnis exportieren", self)
-        hilfeLogExportieren.triggered.connect(self.logExportieren) # type: ignore
+        hilfeLogExportieren.triggered.connect(self.logExportieren) 
         
         anwendungMenu.addAction(aboutAction)
         anwendungMenu.addAction(updateAction)
@@ -295,6 +298,7 @@ class MainWindow(QMainWindow):
         hilfeMenu.addAction(hilfeUpdateAction)
         hilfeMenu.addSeparator()
         hilfeMenu.addAction(hilfeUeberAction)
+        hilfeMenu.addAction(hilfeEulaAction)
         hilfeMenu.addSeparator()
         hilfeMenu.addAction(hilfeLogExportieren)
         
@@ -321,6 +325,9 @@ class MainWindow(QMainWindow):
     def ueberSignoGdt(self):
         de = dialogUeberSignoGdt.UeberSignoGdt()
         de.exec()
+
+    def eula(self):
+        QDesktopServices.openUrl("https://gdttools.de/Lizenzvereinbarung_SignoGDT.pdf")
 
     def logExportieren(self):
         if (os.path.exists(os.path.join(basedir, "log"))):
@@ -397,7 +404,7 @@ class MainWindow(QMainWindow):
                     os.execl(sys.executable, __file__, *sys.argv)
     
     def signogdtWiki(self, link):
-        QDesktopServices.openUrl("https://www.github.com/retconx/signogdt/wiki")
+        QDesktopServices.openUrl("https://github.com/retconx/signogdt/wiki")
                 
     def gdtToolsLinkGeklickt(self, link):
         QDesktopServices.openUrl(link)
