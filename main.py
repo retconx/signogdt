@@ -1,7 +1,7 @@
 import sys, configparser, os, datetime, shutil, logger, time, subprocess
 import xml.etree.ElementTree as ElementTree
 import gdt, gdttoolsL, class_dokumenttyp, class_smlDatei
-import dialogEinstellungenGdt, dialogEinstellungenGdt, dialogEinstellungenLanrLizenzschluessel, dialogUeberSignoGdt, dialogEinstellungenAllgemein, dialogDokumenttypHinzufuegen, dialogWarten
+import dialogEinstellungenGdt, dialogEinstellungenGdt, dialogEinstellungenLanrLizenzschluessel, dialogUeberSignoGdt, dialogEinstellungenAllgemein, dialogDokumenttypHinzufuegen, dialogWarten, dialogEula
 from PySide6.QtCore import Qt, QTranslator, QLibraryInfo,QFileSystemWatcher
 from PySide6.QtGui import QFont, QAction, QIcon, QDesktopServices
 from PySide6.QtWidgets import (
@@ -102,10 +102,11 @@ class MainWindow(QMainWindow):
                 mb.exec()
 
         # Nachträglich hinzufefügte Options
-        # 3.10.0
-        # self.benutzeruebernehmen = False
-        # if self.configIni.has_option("Allgemein", "benutzeruebernehmen"):
-        #     self.benutzeruebernehmen = (self.configIni["Allgemein"]["benutzeruebernehmen"] == "1")
+        # 1.0.2
+        global ci_eulagelesen
+        ci_eulagelesen = False
+        if configIni.has_option("Allgemein", "eulagelesen"):
+            ci_eulagelesen = configIni["Allgemein"]["eulagelesen"] == "True"
         # /Nachträglich hinzufefügte Options
 
         # Prüfen, ob Lizenzschlüssel unverschlüsselt
@@ -118,6 +119,21 @@ class MainWindow(QMainWindow):
         else:
             ci_lizenzschluessel = gdttoolsL.GdtToolsLizenzschluessel.dekrypt(ci_lizenzschluessel)
 
+        # Prüfen, ob EULA gelesen
+        if not ci_eulagelesen:
+            de = dialogEula.Eula()
+            de.exec()
+            if de.checkBoxZustimmung.isChecked():
+                ci_eulagelesen = True
+                configIni["Allgemein"]["eulagelesen"] = "True"
+                with open(os.path.join(ci_pfad, "config.ini"), "w") as configfile:
+                    configIni.write(configfile)
+                logger.logger.info("EULA zugestimmt")
+            else:
+                mb = QMessageBox(QMessageBox.Icon.Information, "Hinweis von SignoGDT", "Ohne einmalige Zustimmung der Lizenzvereinbarung kann SignoGDT nicht gestartet werden.", QMessageBox.StandardButton.Ok)
+                mb.exec()
+                sys.exit()
+            
         # Grundeinstellungen bei erstem Start
         if ersterStart:
             logger.logger.info("Erster Start")
@@ -136,6 +152,8 @@ class MainWindow(QMainWindow):
                 # Version aktualisieren
                 configIni["Allgemein"]["version"] = configIniBase["Allgemein"]["version"]
                 configIni["Allgemein"]["releasedatum"] = configIniBase["Allgemein"]["releasedatum"] 
+                ci_eulagelesen = False
+                configIni["Allgemein"]["eulagelesen"] = "False"
                 # config.ini aktualisieren
                 # 3.9.0 -> 3.10.0: ["Allgemein"]["benutzeruebernehmen"], ["Allgemein"]["einrichtunguebernehmen"] und ["Benutzer"]["einrichtung"] hinzufügen
                 # if not self.configIni.has_option("Allgemein", "benutzeruebernehmen"):
@@ -146,13 +164,26 @@ class MainWindow(QMainWindow):
                     configIni.write(configfile)
                 ci_version = configIni["Allgemein"]["version"]
                 logger.logger.info("Version auf " + ci_version + " aktualisiert")
-                mb = QMessageBox(QMessageBox.Icon.Information, "Hinweis von SignoGDT", "SignoGDT wurde erfolgreich auf Version " + ci_version + " aktualisiert.", QMessageBox.StandardButton.Ok)
-                mb.setTextFormat(Qt.TextFormat.RichText)
-                mb.exec()
+                # Prüfen, ob EULA gelesen
+                de = dialogEula.Eula(ci_version)
+                de.exec()
+                if de.checkBoxZustimmung.isChecked():
+                    ci_eulagelesen = True
+                    configIni["Allgemein"]["eulagelesen"] = "True"
+                    with open(os.path.join(ci_pfad, "config.ini"), "w") as configfile:
+                        configIni.write(configfile)
+                    logger.logger.info("EULA zugestimmt")
+                else:
+                    mb = QMessageBox(QMessageBox.Icon.Information, "Hinweis von SignoGDT", "Ohne  Zustimmung zur Lizenzvereinbarung kann SignoGDT nicht gestartet werden.", QMessageBox.StandardButton.Ok)
+                    mb.exec()
+                    sys.exit()
         except:
-            logger.logger.error("Problem beim Aktualisieren auf Version " + configIniBase["Allgemein"]["version"])
-            mb = QMessageBox(QMessageBox.Icon.Warning, "Hinweis von SignoGDT", "Problem beim Aktualisieren auf Version " + configIniBase["Allgemein"]["version"], QMessageBox.StandardButton.Ok)
-            mb.exec()
+            if ci_eulagelesen: # Da sys.exit() ohne EULA-Zustimmung eine Exception auslöst
+                logger.logger.error("Problem beim Aktualisieren auf Version " + configIniBase["Allgemein"]["version"])
+                mb = QMessageBox(QMessageBox.Icon.Warning, "Hinweis von SignoGDT", "Problem beim Aktualisieren auf Version " + configIniBase["Allgemein"]["version"], QMessageBox.StandardButton.Ok)
+                mb.exec()
+            else:
+                sys.exit()
 
         # Add-Ons freigeschaltet?
         self.addOnsFreigeschaltet = gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(ci_lizenzschluessel, ci_lanr, gdttoolsL.SoftwareId.SIGNOGDT)
