@@ -152,8 +152,6 @@ class MainWindow(QMainWindow):
                 # Version aktualisieren
                 configIni["Allgemein"]["version"] = configIniBase["Allgemein"]["version"]
                 configIni["Allgemein"]["releasedatum"] = configIniBase["Allgemein"]["releasedatum"] 
-                ci_eulagelesen = False
-                configIni["Allgemein"]["eulagelesen"] = "False"
                 # config.ini aktualisieren
                 # 3.9.0 -> 3.10.0: ["Allgemein"]["benutzeruebernehmen"], ["Allgemein"]["einrichtunguebernehmen"] und ["Benutzer"]["einrichtung"] hinzufügen
                 # if not self.configIni.has_option("Allgemein", "benutzeruebernehmen"):
@@ -167,23 +165,23 @@ class MainWindow(QMainWindow):
                 # Prüfen, ob EULA gelesen
                 de = dialogEula.Eula(ci_version)
                 de.exec()
-                if de.checkBoxZustimmung.isChecked():
-                    ci_eulagelesen = True
-                    configIni["Allgemein"]["eulagelesen"] = "True"
-                    with open(os.path.join(ci_pfad, "config.ini"), "w") as configfile:
-                        configIni.write(configfile)
+                ci_eulagelesen = de.checkBoxZustimmung.isChecked()
+                configIni["Allgemein"]["eulagelesen"] = str(ci_eulagelesen)
+                with open(os.path.join(ci_pfad, "config.ini"), "w") as configfile:
+                    configIni.write(configfile)
+                if ci_eulagelesen:
                     logger.logger.info("EULA zugestimmt")
                 else:
+                    logger.logger.info("EULA nicht zugestimmt")
                     mb = QMessageBox(QMessageBox.Icon.Information, "Hinweis von SignoGDT", "Ohne  Zustimmung zur Lizenzvereinbarung kann SignoGDT nicht gestartet werden.", QMessageBox.StandardButton.Ok)
                     mb.exec()
                     sys.exit()
+        except SystemExit:
+            sys.exit()
         except:
-            if ci_eulagelesen: # Da sys.exit() ohne EULA-Zustimmung eine Exception auslöst
-                logger.logger.error("Problem beim Aktualisieren auf Version " + configIniBase["Allgemein"]["version"])
-                mb = QMessageBox(QMessageBox.Icon.Warning, "Hinweis von SignoGDT", "Problem beim Aktualisieren auf Version " + configIniBase["Allgemein"]["version"], QMessageBox.StandardButton.Ok)
-                mb.exec()
-            else:
-                sys.exit()
+            logger.logger.error("Problem beim Aktualisieren auf Version " + configIniBase["Allgemein"]["version"])
+            mb = QMessageBox(QMessageBox.Icon.Warning, "Hinweis von SignoGDT", "Problem beim Aktualisieren auf Version " + configIniBase["Allgemein"]["version"], QMessageBox.StandardButton.Ok)
+            mb.exec()
 
         # Add-Ons freigeschaltet?
         self.addOnsFreigeschaltet = gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(ci_lizenzschluessel, ci_lanr, gdttoolsL.SoftwareId.SIGNOGDT)
