@@ -1,4 +1,4 @@
-import sys, os, logging, datetime
+import sys, os, logging, datetime, re
 basedir = os.path.dirname(__file__)
 
 if not os.path.exists(os.path.join(basedir, "log")):

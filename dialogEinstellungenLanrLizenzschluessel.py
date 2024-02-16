@@ -63,7 +63,7 @@ class EinstellungenProgrammerweiterungen(QDialog):
             mb.exec()
             self.lineEditLanr.setFocus()
             self.lineEditLanr.selectAll()
-        elif re.match(reLizenzschluessel, self.lineEditLizenzschluessel.text()) == None or not gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(self.lineEditLizenzschluessel.text().upper(), self.lineEditLanr.text(), gdttoolsL.SoftwareId.SIGNOGDT):
+        elif re.match(reLizenzschluessel, self.lineEditLizenzschluessel.text()) == None or not gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(self.lineEditLizenzschluessel.text().upper(), self.lineEditLanr.text(), gdttoolsL.SoftwareId.SIGNOGDT) and not gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(self.lineEditLizenzschluessel.text().upper(), self.lineEditLanr.text(), gdttoolsL.SoftwareId.SIGNOGDTPSEUDO):
             mb = QMessageBox(QMessageBox.Icon.Information, "Hinweis", "Die LANR/Lizenzschlüssel-Kombination ist ungültig.", QMessageBox.StandardButton.Ok)
             mb.exec()
             self.lineEditLizenzschluessel.setFocus()

@@ -1,4 +1,4 @@
-import sys, configparser, os, datetime, shutil, logger, time, subprocess
+import sys, configparser, os, datetime, shutil, logger, time, subprocess, re
 import xml.etree.ElementTree as ElementTree
 import gdt, gdttoolsL, class_dokumenttyp, class_smlDatei
 import dialogEinstellungenGdt, dialogEinstellungenGdt, dialogEinstellungenLanrLizenzschluessel, dialogUeberSignoGdt, dialogEinstellungenAllgemein, dialogDokumenttypHinzufuegen, dialogWarten, dialogEula
@@ -184,7 +184,7 @@ class MainWindow(QMainWindow):
             mb.exec()
 
         # Add-Ons freigeschaltet?
-        self.addOnsFreigeschaltet = gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(ci_lizenzschluessel, ci_lanr, gdttoolsL.SoftwareId.SIGNOGDT)
+        self.addOnsFreigeschaltet = gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(ci_lizenzschluessel, ci_lanr, gdttoolsL.SoftwareId.SIGNOGDT) or gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(ci_lizenzschluessel, ci_lanr, gdttoolsL.SoftwareId.SIGNOGDTPSEUDO)
         
         jahr = datetime.datetime.now().year
         copyrightJahre = "2024"
@@ -217,6 +217,8 @@ class MainWindow(QMainWindow):
         layoutSpalte1V = QVBoxLayout()
         layoutSpalte2V = QVBoxLayout()
         layoutSpalte2G = QGridLayout()
+        self.labelPseudolizenz = QLabel("+++ Pseudolizenz für Test-/ Präsentationszwecke +++")
+        self.labelPseudolizenz.setStyleSheet("color:rgb(200,0,0);font-style:italic")
         # Dokumenttypen
         labelDokumenttypen = QLabel("Dokumenttypen:")
         self.pushButtonDokumenttypHinzufuegen = QPushButton("Neu...")
@@ -280,6 +282,8 @@ class MainWindow(QMainWindow):
 
         mainLayoutH.addLayout(layoutSpalte1V)
         mainLayoutH.addLayout(layoutSpalte2V)
+        if self.addOnsFreigeschaltet and gdttoolsL.GdtToolsLizenzschluessel.getSoftwareId(ci_lizenzschluessel) == gdttoolsL.SoftwareId.SIGNOGDTPSEUDO:
+            mainLayoutV.addWidget(self.labelPseudolizenz, alignment=Qt.AlignmentFlag.AlignCenter)
         mainLayoutV.addLayout(mainLayoutH)
         mainLayoutV.addWidget(self.buttonBox)
         self.widget.setLayout(mainLayoutV)
@@ -395,7 +399,11 @@ class MainWindow(QMainWindow):
                 mb.button(QMessageBox.StandardButton.Yes).setText("Ja")
                 mb.button(QMessageBox.StandardButton.No).setText("Nein")
                 if mb.exec() == QMessageBox.StandardButton.Yes:
-                    os.execl(sys.executable, __file__, *sys.argv)
+                    if re.search("python", sys.executable, flags=re.IGNORECASE) != None:
+                        os.execl(sys.executable, __file__, *sys.argv)
+                    else: 
+                        os.execl(sys.executable, *sys.argv)
+
 
     def einstellungenGdt(self, checked, neustartfrage = False):
         de = dialogEinstellungenGdt.EinstellungenGdt(ci_pfad)
@@ -415,7 +423,10 @@ class MainWindow(QMainWindow):
                 mb.button(QMessageBox.StandardButton.Yes).setText("Ja")
                 mb.button(QMessageBox.StandardButton.No).setText("Nein")
                 if mb.exec() == QMessageBox.StandardButton.Yes:
-                    os.execl(sys.executable, __file__, *sys.argv)
+                    if re.search("python", sys.executable, flags=re.IGNORECASE) != None:
+                        os.execl(sys.executable, __file__, *sys.argv)
+                    else: 
+                        os.execl(sys.executable, *sys.argv)
 
     def einstellungenLanrLizenzschluessel(self, checked, neustartfrage = False):
         de = dialogEinstellungenLanrLizenzschluessel.EinstellungenProgrammerweiterungen(ci_pfad)
@@ -430,7 +441,10 @@ class MainWindow(QMainWindow):
                 mb.button(QMessageBox.StandardButton.Yes).setText("Ja")
                 mb.button(QMessageBox.StandardButton.No).setText("Nein")
                 if mb.exec() == QMessageBox.StandardButton.Yes:
-                    os.execl(sys.executable, __file__, *sys.argv)
+                    if re.search("python", sys.executable, flags=re.IGNORECASE) != None:
+                        os.execl(sys.executable, __file__, *sys.argv)
+                    else: 
+                        os.execl(sys.executable, *sys.argv)
     
     def signogdtWiki(self, link):
         QDesktopServices.openUrl("https://github.com/retconx/signogdt/wiki")
@@ -666,6 +680,32 @@ else:
     mb.exec()
     sys.exit()
 
+def getDokumemnttypAusArgs():
+    """
+    Gibt das Argument, das nicht debug oder patidxxx ist, zurück, falls vorhanden
+    Return:
+        Dokumenttyp oder "", falls nicht vorhanden: str
+    """
+    dokumenttyp = ""
+    for arg in sys.argv[1:]:
+        if re.match("^debug$", arg, True) == None and re.match("^patid\\d+$", arg, False) == None:
+            dokumenttyp = arg
+            break
+    return dokumenttyp
+
+def getPatIdAusArgs():
+    """
+    Gibt xxx aus patidxxx zurück, falls vorhanden
+    Return:
+        PatId oder "", falls nicht vorhanden: str
+    """
+    patId = ""
+    for arg in sys.argv[1:]:
+        if re.match("^patid\\d+$", arg, False) != None:
+            patId = arg[5:]
+            break
+    return patId
+
 configIni.read(os.path.join(ci_pfad, "config.ini"))
 ci_version = configIni["Allgemein"]["version"]
 ci_releasedatum = configIni["Allgemein"]["releasedatum"]
@@ -692,81 +732,93 @@ tempIdSignoGdt = ""
 dokumenttypName = ""
 
 # Programmstart mit Dokumenttyp als Argument?
-if len(sys.argv) > 1 and sys.argv[1].lower() != "debug":
+if getDokumemnttypAusArgs() != "":
+    patId = getPatIdAusArgs()
     tray = QSystemTrayIcon(app)
     icon = QIcon(os.path.join(os.path.dirname(__file__), "icons/program.png"))
     tray.setIcon(icon)
     tray.show()
-    if gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(ci_lizenzschluessel, ci_lanr, gdttoolsL.SoftwareId.SIGNOGDT):
-        gesuchterDokumenttypname = sys.argv[1]
+    if gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(ci_lizenzschluessel, ci_lanr, gdttoolsL.SoftwareId.SIGNOGDT) or (gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(ci_lizenzschluessel, ci_lanr, gdttoolsL.SoftwareId.SIGNOGDTPSEUDO) and patId != ""):
+        gesuchterDokumenttypname = getDokumemnttypAusArgs()
         logger.logger.info("Start mit Dokumenttyp " + gesuchterDokumenttypname)
+        if patId != "":
+            logger.logger.info("PatId " + patId + " als Startargument übergeben")
         gdtDateiname = ci_kuerzelSignoGdt + ci_kuerzelPraxisEdv + ".gdt"
         if os.path.exists(os.path.join(updateSafePath, "config.ini")):
             # GDT-Datei von PVS laden
             gd = gdt.GdtDatei()
             try:
                 gd.laden(os.path.join(ci_austauschVerzeichnis, gdtDateiname), ci_zeichensatz)
-                patId = str(gd.getInhalt("3000"))
-                logger.logger.info("GDT-Datei (Pat-Id: " + patId + ") " + os.path.join(ci_austauschVerzeichnis, gdtDateiname) + " geladen")
+                logger.logger.info("GDT-Datei (Pat-Id: " + str(gd.getInhalt("3000")) + ") " + os.path.join(ci_austauschVerzeichnis, gdtDateiname) + " geladen")
+                # Pseudolizenz-Check
+                pseudoLizenzcheckOk = True
+                if patId != "" and patId != gd.getInhalt("3000"):
+                    pseudoLizenzcheckOk = False
+                elif patId == "":
+                    patId = gd.getInhalt("3000")
                 if ci_importDateiLoeschen:
                     os.unlink(os.path.join(ci_austauschVerzeichnis, gdtDateiname))
                     logger.logger.info("GDT-Importdatei " + os.path.join(ci_austauschVerzeichnis, gdtDateiname) + " gelöscht")
-                verfuegbareVariablen = {}
-                for inhalt in variablenInhalte:
-                    feldkennung = inhalt[-5:-1]
-                    if gd.getInhalt(feldkennung) != None:
-                        verfuegbareVariablen[feldkennung] = gd.getInhalt(feldkennung)
-                dokumenttypen = class_dokumenttyp.getAlleDokumenttypen(os.path.join(updateSafePath, "dokumenttypen.xml"))
-                for dokumenttyp in dokumenttypen:
-                    if dokumenttyp.name == gesuchterDokumenttypname:
-                        dokumenttypName = dokumenttyp.getName()
-                        tempIdSignoGdt = dokumenttyp.getGdtId()
-                        logger.logger.info("Argument " + dokumenttypName + "(GDT-ID: " + tempIdSignoGdt + ") in dokumenttypen.xml gefunden")
-                        variablenErsetzt = []
-                        for var in dokumenttyp.getVariablen():
-                            tempVariableErsetzt = var
-                            for verfuegbareVariable in verfuegbareVariablen:
-                                if verfuegbareVariable in datumsfeldkennungen:
-                                    tempVariableErsetzt = tempVariableErsetzt.replace("${" + verfuegbareVariable + "}", verfuegbareVariablen[verfuegbareVariable][:2] + "." + verfuegbareVariablen[verfuegbareVariable][2:4] + "." + verfuegbareVariablen[verfuegbareVariable][4:])
+                if pseudoLizenzcheckOk:
+                    verfuegbareVariablen = {}
+                    for inhalt in variablenInhalte:
+                        feldkennung = inhalt[-5:-1]
+                        if gd.getInhalt(feldkennung) != None:
+                            verfuegbareVariablen[feldkennung] = gd.getInhalt(feldkennung)
+                    dokumenttypen = class_dokumenttyp.getAlleDokumenttypen(os.path.join(updateSafePath, "dokumenttypen.xml"))
+                    for dokumenttyp in dokumenttypen:
+                        if dokumenttyp.name == gesuchterDokumenttypname:
+                            dokumenttypName = dokumenttyp.getName()
+                            tempIdSignoGdt = dokumenttyp.getGdtId()
+                            logger.logger.info("Argument " + dokumenttypName + "(GDT-ID: " + tempIdSignoGdt + ") in dokumenttypen.xml gefunden")
+                            variablenErsetzt = []
+                            for var in dokumenttyp.getVariablen():
+                                tempVariableErsetzt = var
+                                for verfuegbareVariable in verfuegbareVariablen:
+                                    if verfuegbareVariable in datumsfeldkennungen:
+                                        tempVariableErsetzt = tempVariableErsetzt.replace("${" + verfuegbareVariable + "}", verfuegbareVariablen[verfuegbareVariable][:2] + "." + verfuegbareVariablen[verfuegbareVariable][2:4] + "." + verfuegbareVariablen[verfuegbareVariable][4:])
+                                    else:
+                                        tempVariableErsetzt = tempVariableErsetzt.replace("${" + verfuegbareVariable + "}", verfuegbareVariablen[verfuegbareVariable])
+                                variablenErsetzt.append(tempVariableErsetzt)
+                            values = class_smlDatei.Values(dokumenttyp.name, variablenErsetzt)
+                            op = class_smlDatei.Open(dokumenttyp.getDateipfade(), values)
+                            openElement = op.getXml()
+                            sd = class_smlDatei.SmlDatei([op.getXml()], ci_deleteafteropen)
+                            try:
+                                # signogdt.sml speichern
+                                sd.speichern(os.path.join(updateSafePath,"signogdt.sml"))
+                                logger.logger.info("signogdt.sml erfolgreich gespeichert")
+                                time.sleep(2)
+                                # Archivverzeichnisüberwachung starten
+                                fsw = QFileSystemWatcher()
+                                logger.logger.info("FileSystemWatcher instanziert")
+                                if fsw.addPath(ci_signoSignArchivverzeichnis):
+                                    logger.logger.info("Archivverzeichnis " + ci_signoSignArchivverzeichnis + " dem FileSystemWatcher hinzugefügt")
+                                    # signoSign/2 starten
+                                    try:
+                                        tray.showMessage("SignoGDT", "SignoSign/2 mit Dokumenttyp " + gesuchterDokumenttypname + " wird geladen", QSystemTrayIcon.MessageIcon.Information)
+                                        subprocess.run([ci_signoSignPfad, os.path.join(updateSafePath, "signogdt.sml")], check=True)
+                                        dw = dialogWarten.Warten() # für manuellen Abbruch
+                                        logger.logger.info("Warten-Dialog instanziert")
+                                        fsw.directoryChanged.connect(lambda pfad, patId = str(patId), dw = dw, fsw = fsw: fswDirectoryChanged(pfad, patId, dw, fsw))
+                                        dw.exec() # Manuell abgebrochen
+                                        logger.logger.info("Über Warten-Dialog manuell abgebrochen")
+                                        fsw.removePath(ci_signoSignArchivverzeichnis)
+                                        logger.logger.info("Archivverzeichnis " + ci_signoSignArchivverzeichnis + " vom FileSystemWatcher entfernt")
+                                    except subprocess.CalledProcessError as e:
+                                        logger.logger.error("CalledProcessError beim Startversuch von signoSign: " + str(e))
+                                    except Exception as e:
+                                        logger.logger.error("Unbehandelter Fehler nach signoSign/2 starten: " + str(e))
                                 else:
-                                    tempVariableErsetzt = tempVariableErsetzt.replace("${" + verfuegbareVariable + "}", verfuegbareVariablen[verfuegbareVariable])
-                            variablenErsetzt.append(tempVariableErsetzt)
-                        values = class_smlDatei.Values(dokumenttyp.name, variablenErsetzt)
-                        op = class_smlDatei.Open(dokumenttyp.getDateipfade(), values)
-                        openElement = op.getXml()
-                        sd = class_smlDatei.SmlDatei([op.getXml()], ci_deleteafteropen)
-                        try:
-                            # signogdt.sml speichern
-                            sd.speichern(os.path.join(updateSafePath,"signogdt.sml"))
-                            logger.logger.info("signogdt.sml erfolgreich gespeichert")
-                            time.sleep(2)
-                            # Archivverzeichnisüberwachung starten
-                            fsw = QFileSystemWatcher()
-                            logger.logger.info("FileSystemWatcher instanziert")
-                            if fsw.addPath(ci_signoSignArchivverzeichnis):
-                                logger.logger.info("Archivverzeichnis " + ci_signoSignArchivverzeichnis + " dem FileSystemWatcher hinzugefügt")
-                                # signoSign/2 starten
-                                try:
-                                    tray.showMessage("SignoGDT", "SignoSign/2 mit Dokumenttyp " + gesuchterDokumenttypname + " wird geladen", QSystemTrayIcon.MessageIcon.Information)
-                                    subprocess.run([ci_signoSignPfad, os.path.join(updateSafePath, "signogdt.sml")], check=True)
-                                    dw = dialogWarten.Warten() # für manuellen Abbruch
-                                    logger.logger.info("Warten-Dialog instanziert")
-                                    fsw.directoryChanged.connect(lambda pfad, patId = patId, dw = dw, fsw = fsw: fswDirectoryChanged(pfad, patId, dw, fsw))
-                                    dw.exec() # Manuell abgebrochen
-                                    logger.logger.info("Über Warten-Dialog manuell abgebrochen")
-                                    fsw.removePath(ci_signoSignArchivverzeichnis)
-                                    logger.logger.info("Archivverzeichnis " + ci_signoSignArchivverzeichnis + " vom FileSystemWatcher entfernt")
-                                except subprocess.CalledProcessError as e:
-                                    logger.logger.error("CalledProcessError beim Startversuch von signoSign: " + str(e))
-                                except Exception as e:
-                                    logger.logger.error("Unbehandelter Fehler nach signoSign/2 starten: " + str(e))
-                            else:
-                                logger.logger.error("Problem beim Hinzufügen des Archivverzeichnisses " + ci_signoSignArchivverzeichnis + " zum FileSystemWatcher")
-                        except Exception as e:
-                            logger.logger.error("Fehler beim Speichern der signogdt.sml: " + str(e)) 
-                        sys.exit()
-                logger.logger.warning("Dokumenttyp " + gesuchterDokumenttypname + " als Startargument nicht gefunden")
-                sys.exit()
+                                    logger.logger.error("Problem beim Hinzufügen des Archivverzeichnisses " + ci_signoSignArchivverzeichnis + " zum FileSystemWatcher")
+                            except Exception as e:
+                                logger.logger.error("Fehler beim Speichern der signogdt.sml: " + str(e)) 
+                            sys.exit()
+                    logger.logger.warning("Dokumenttyp " + gesuchterDokumenttypname + " als Startargument nicht gefunden")
+                    sys.exit()
+                else: # Pseudocheck False
+                    tray.showMessage("SignoGDT", "Falsche PatId übergeben", QSystemTrayIcon.MessageIcon.Warning)
+                    logger.logger.error("Mit Pseudolizenz übergebene PatId " + str(patId) + " stimmt nicht mit PatId der geladenen GDT-Datei überein")
             except Exception as e:
                 logger.logger.error("Fehler beim Laden der GDT-Datei " + os.path.join(ci_austauschVerzeichnis, gdtDateiname) + ": " + str(e))
             sys.exit()
@@ -774,6 +826,9 @@ if len(sys.argv) > 1 and sys.argv[1].lower() != "debug":
             tray.showMessage("SignoGDT", "config.ini nicht gefunden", QSystemTrayIcon.MessageIcon.Critical)
             logger.logger.error("config.ini exisitert nicht")
             sys.exit()
+    elif gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(ci_lizenzschluessel, ci_lanr, gdttoolsL.SoftwareId.SIGNOGDTPSEUDO) and patId == "":
+        tray.showMessage("SignoGDT", "Pseudolizenz ohne PatId-Übergabe", QSystemTrayIcon.MessageIcon.Warning)
+        sys.exit()
     else:
         tray.showMessage("SignoGDT", "Ungültige LANR-/ Lizenzschlüsselkombination", QSystemTrayIcon.MessageIcon.Warning)
         sys.exit()

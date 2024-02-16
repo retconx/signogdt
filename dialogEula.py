@@ -22,6 +22,7 @@ class Eula(QDialog):
 
         dialogLayoutV = QVBoxLayout()
         labelAktualisiert = QLabel("SignoGDT wurde erfolgreich auf Version " + neueVersion + " aktualisiert.")
+        labelAktualisiert.setStyleSheet("font-weight:bold")
         labelBestaetigung = QLabel("Bitte bestätigen Sie, dass Sie die folgende Lizenzvereinbarung gelesen haben und dieser zustimmen.")
         text = ""
         self.textEditEula = QTextEdit()
