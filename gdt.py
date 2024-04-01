@@ -287,7 +287,7 @@ class GdtDatei:
                 self.gdtDatei[i] = gdtzeile.erzeugeZeile("8100", laengeFormatiert)
 
         try:
-            with open(pfad, "w", encoding=enc) as fobj:
+            with open(pfad, "w", encoding=enc, newline="") as fobj:
                 for zeile in self.gdtDatei:
                     fobj.write(zeile)
             return True

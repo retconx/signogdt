@@ -645,7 +645,7 @@ def fswDirectoryChanged(pfad, patId:str, wartenDialog:QDialog, fsw:QFileSystemWa
             logger.logger.info("Dateiname " + file + " entspricht nicht dem signoSign-Archivierungsname " + ci_signoSignArchivierungsname + ".pdf")   
 
 app = QApplication(sys.argv)
-app.setWindowIcon(QIcon(os.path.join(basedir, "icons/program.png")))
+app.setWindowIcon(QIcon(os.path.join(basedir, "icons", "program.png")))
 # config.ini lesen
 ersterStart = False
 updateSafePath = ""
