@@ -456,8 +456,7 @@ class MainWindow(QMainWindow):
             self.listWidgetDokumenttypen.addItem(ddh.lineEditName.text())
             dokumenttypNummer = self.listWidgetDokumenttypen.count() - 1
             self.listWidgetDokumenttypen.setCurrentRow(dokumenttypNummer)
-            gdtid = ci_idSignoGdt[:-3] + "{:03}".format(dokumenttypNummer)
-            self.dokumenttypen.append(class_dokumenttyp.Dokumenttyp(ddh.lineEditName.text(), gdtid, [], []))
+            self.dokumenttypen.append(class_dokumenttyp.Dokumenttyp(ddh.lineEditName.text(), [], []))
             self.aktualisiereFormular()
             self.listWidgetDokumenttypen.item(dokumenttypNummer).setFlags(self.listWidgetDokumenttypen.item(dokumenttypNummer).flags() | Qt.ItemFlag.ItemIsEditable)
 
@@ -499,7 +498,7 @@ class MainWindow(QMainWindow):
             gesuchterDokumenttypNummer = 0
             for dokumenttyp in self.dokumenttypen:
                 if dokumenttyp.name == dokumenttypName:
-                    gesuchterDokumenttyp = class_dokumenttyp.Dokumenttyp(dokumenttyp.name, dokumenttyp.getGdtId(), dokumenttyp.getDateipfade().copy(), dokumenttyp.getVariablen().copy())
+                    gesuchterDokumenttyp = class_dokumenttyp.Dokumenttyp(dokumenttyp.name, dokumenttyp.getDateipfade().copy(), dokumenttyp.getVariablen().copy())
                     break
                 gesuchterDokumenttypNummer += 1
             if gesuchterDokumenttyp != None:
@@ -617,7 +616,7 @@ def fswDirectoryChanged(pfad, patId:str, wartenDialog:QDialog, fsw:QFileSystemWa
             logger.logger.info("Warten-Dialog geschlossen")
             # GDT-Datei für PVS erzeugen
             gd = gdt.GdtDatei()
-            sh = gdt.SatzHeader(gdt.Satzart.DATEN_EINER_UNTERSUCHUNG_UEBERMITTELN_6310, ci_idPraxisEdv, tempIdSignoGdt, ci_zeichensatz, "2.10", "Fabian Treusch - GDT-Tools", "SignoGDT", ci_version, patId)
+            sh = gdt.SatzHeader(gdt.Satzart.DATEN_EINER_UNTERSUCHUNG_UEBERMITTELN_6310, ci_idPraxisEdv, ci_idSignoGdt, ci_zeichensatz, "2.10", "Fabian Treusch - GDT-Tools", "SignoGDT", ci_version, patId)
             gd.erzeugeGdtDatei(sh.getSatzheader())
             gd.addZeile("6302", "signosign_" + datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d_%H%M%S"))
             gd.addZeile("6303", "pdf")
@@ -721,7 +720,6 @@ elif z == "3":
     ci_zeichensatz = gdt.GdtZeichensatz.ANSI_CP1252
 ci_lanr = configIni["Erweiterungen"]["lanr"]
 ci_lizenzschluessel = gdttoolsL.GdtToolsLizenzschluessel.dekrypt(configIni["Erweiterungen"]["lizenzschluessel"])
-tempIdSignoGdt = ""
 dokumenttypName = ""
 
 # Programmstart mit Dokumenttyp als Argument?
@@ -769,8 +767,7 @@ if getDokumenttypAusArgs() != "":
                     for dokumenttyp in dokumenttypen:
                         if dokumenttyp.name == gesuchterDokumenttypname:
                             dokumenttypName = dokumenttyp.getName()
-                            tempIdSignoGdt = dokumenttyp.getGdtId()
-                            logger.logger.info("Argument " + dokumenttypName + "(GDT-ID: " + tempIdSignoGdt + ") in dokumenttypen.xml gefunden")
+                            logger.logger.info("Argument " + dokumenttypName + " in dokumenttypen.xml gefunden")
                             variablenErsetzt = []
                             for var in dokumenttyp.getVariablen():
                                 tempVariableErsetzt = var

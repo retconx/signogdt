@@ -11,16 +11,14 @@ class DokumenttypFehlerException(Exception):
         return "Dokumenttyp-Fehler: " + self.Meldung
 
 class Dokumenttyp:
-    def __init__(self, name:str, gdtid:str, dateipfade:list, variablen:list):
+    def __init__(self, name:str, dateipfade:list, variablen:list):
         self.name = name
-        self.gdtid = gdtid
         self.dateipfade = dateipfade
         self.variablen = variablen
 
     def getXml(self):
         dokumenttypElement = ElementTree.Element("dokumenttyp")
         dokumenttypElement.set("name", self.name)
-        dokumenttypElement.set("gdtid", self.gdtid)
         dateipfadeElement = ElementTree.Element("dateipfade")
         for dateipfad in self.dateipfade:
             if dateipfad != "":
@@ -43,14 +41,6 @@ class Dokumenttyp:
             Name:str
         """
         return self.name
-    
-    def getGdtId(self):
-        """
-        Gibt die GDT-ID des Dokumenttyps zurück
-        Return:
-            gdtid:str
-        """
-        return self.gdtid
     
     def getDateipfade(self):
         """
@@ -99,7 +89,7 @@ def getAlleDokumenttypen(pfad:str):
                 if inhalt == "None":
                     inhalt = ""
                 variablen.append(inhalt)
-            dokumenttypen.append(Dokumenttyp(name, gdtid, dateipfade.copy(), variablen.copy()))
+            dokumenttypen.append(Dokumenttyp(name, dateipfade.copy(), variablen.copy()))
         return dokumenttypen
     else:
         raise DokumenttypFehlerException(pfad + " existiert nicht")
