@@ -18,7 +18,7 @@ class DokumenttypAuswaehlen(QDialog):
     def __init__(self, updateSafePath:str):
         super().__init__()
 
-        self.setWindowTitle("ScoreGDT Dokumenttyp-Auswahl")
+        self.setWindowTitle("SignoGDT Dokumenttyp-Auswahl")
         self.buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setText("Abbrechen")
         self.buttonBox.accepted.connect(self.accept)
