@@ -1,7 +1,7 @@
 import sys, configparser, os, datetime, shutil, logger, time, subprocess, re
 import xml.etree.ElementTree as ElementTree
 import gdt, gdttoolsL, class_dokumenttyp, class_smlDatei
-import dialogEinstellungenGdt, dialogEinstellungenGdt, dialogEinstellungenLanrLizenzschluessel, dialogUeberSignoGdt, dialogEinstellungenAllgemein, dialogDokumenttypHinzufuegen, dialogWarten, dialogEula
+import dialogEinstellungenGdt, dialogEinstellungenGdt, dialogEinstellungenLanrLizenzschluessel, dialogUeberSignoGdt, dialogEinstellungenAllgemein, dialogDokumenttypHinzufuegen, dialogWarten, dialogEula, dialogDokumenttypAuswaehlen
 from PySide6.QtCore import Qt, QTranslator, QLibraryInfo,QFileSystemWatcher
 from PySide6.QtGui import QFont, QAction, QIcon, QDesktopServices
 from PySide6.QtWidgets import (
@@ -237,9 +237,7 @@ class MainWindow(QMainWindow):
         layoutSpalte1V.addWidget(labelDokumenttypen)
         layoutSpalte1V.addWidget(self.pushButtonDokumenttypHinzufuegen)
         layoutSpalte1V.addWidget(self.listWidgetDokumenttypen)
-        # GDT-ID, Dateipfade, Variablen
-        self.labelGdtId = QLabel("GDT-ID:")
-        layoutSpalte2G. addWidget(self.labelGdtId, 0, 0, 1, 2)
+        # Dateipfade, Variablen
         labelDateipfade = QLabel("Dateipfade:")
         layoutSpalte2G.addWidget(labelDateipfade, 1, 0, 1, 2)
         self.lineEditDateipfade = []
@@ -495,10 +493,6 @@ class MainWindow(QMainWindow):
         for i in range(10):
             self.lineEditDateipfade[i].setText("")
             self.lineEditVariable[i].setText("")
-        i = 0
-        for dokumenttyp in self.dokumenttypen:
-            dokumenttyp.gdtid = ci_idSignoGdt[:-3] + "{:03}".format(i)
-            i += 1
         if self.listWidgetDokumenttypen.count() > 0:
             dokumenttypName = self.listWidgetDokumenttypen.currentItem().text()
             gesuchterDokumenttyp = None
@@ -509,7 +503,6 @@ class MainWindow(QMainWindow):
                     break
                 gesuchterDokumenttypNummer += 1
             if gesuchterDokumenttyp != None:
-                self.labelGdtId.setText("GDT-ID: " + gesuchterDokumenttyp.getGdtId())
                 i = 0
                 for dateipfad in gesuchterDokumenttyp.getDateipfade():
                     if dateipfad != "None":
@@ -680,7 +673,7 @@ else:
     mb.exec()
     sys.exit()
 
-def getDokumemnttypAusArgs():
+def getDokumenttypAusArgs():
     """
     Gibt das Argument, das nicht debug oder patidxxx ist, zurück, falls vorhanden
     Return:
@@ -732,14 +725,21 @@ tempIdSignoGdt = ""
 dokumenttypName = ""
 
 # Programmstart mit Dokumenttyp als Argument?
-if getDokumemnttypAusArgs() != "":
+if getDokumenttypAusArgs() != "":
     patId = getPatIdAusArgs()
     tray = QSystemTrayIcon(app)
     icon = QIcon(os.path.join(os.path.dirname(__file__), "icons/program.png"))
     tray.setIcon(icon)
     tray.show()
     if gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(ci_lizenzschluessel, ci_lanr, gdttoolsL.SoftwareId.SIGNOGDT) or (gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(ci_lizenzschluessel, ci_lanr, gdttoolsL.SoftwareId.SIGNOGDTPSEUDO) and patId != ""):
-        gesuchterDokumenttypname = getDokumemnttypAusArgs()
+        gesuchterDokumenttypname = getDokumenttypAusArgs()
+        if gesuchterDokumenttypname == "auswahl":
+            dda = dialogDokumenttypAuswaehlen.DokumenttypAuswaehlen(updateSafePath)
+            if dda.exec() == 1:
+                gesuchterDokumenttypname = dda.comboBoxDokumenttypen.currentText()
+            else:
+                tray.hide()
+                sys.exit()
         logger.logger.info("Start mit Dokumenttyp " + gesuchterDokumenttypname)
         if patId != "":
             logger.logger.info("PatId " + patId + " als Startargument übergeben")
@@ -820,6 +820,7 @@ if getDokumemnttypAusArgs() != "":
                     tray.showMessage("SignoGDT", "Falsche PatId übergeben", QSystemTrayIcon.MessageIcon.Warning)
                     logger.logger.error("Mit Pseudolizenz übergebene PatId " + str(patId) + " stimmt nicht mit PatId der geladenen GDT-Datei überein")
             except Exception as e:
+                tray.showMessage("SignoGDT", "Fehler beim Laden der GDT-Datei", QSystemTrayIcon.MessageIcon.Warning)
                 logger.logger.error("Fehler beim Laden der GDT-Datei " + os.path.join(ci_austauschVerzeichnis, gdtDateiname) + ": " + str(e))
             sys.exit()
         else:

@@ -44,10 +44,8 @@ class EinstellungenGdt(QDialog):
         # Groupbox GDT-IDs
         groupboxGdtIds = QGroupBox("GDT-IDs (8 Zeichen)")
         groupboxGdtIds.setStyleSheet("font-weight:bold")
-        labelSignoGdtId = QLabel("SignoGDT\u00b9:")
+        labelSignoGdtId = QLabel("SignoGDT:")
         labelSignoGdtId.setStyleSheet("font-weight:normal")
-        labelErklaerung = QLabel("\u00b9 Die letzten 3 Zeichen werden automatisch gesetzt.")
-        labelErklaerung.setStyleSheet("font-weight:normal")
         labelPraxisEdvId = QLabel("Praxis-EDV:")
         labelPraxisEdvId.setStyleSheet("font-weight:normal")
         self.lineEditSignoGdtId = QLineEdit(self.idSignoGdt)
@@ -59,7 +57,6 @@ class EinstellungenGdt(QDialog):
         groupboxLayoutG.addWidget(self.lineEditSignoGdtId, 0, 1)
         groupboxLayoutG.addWidget(labelPraxisEdvId, 0, 2)
         groupboxLayoutG.addWidget(self.lineEditPraxisEdvId, 0, 3)
-        groupboxLayoutG.addWidget(labelErklaerung, 1, 0, 1, 4)
         groupboxGdtIds.setLayout(groupboxLayoutG)
         # Groupbox Austauschverzeichnis
         groupboxLayoutG = QGridLayout()

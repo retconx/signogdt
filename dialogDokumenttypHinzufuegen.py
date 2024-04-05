@@ -1,18 +1,11 @@
-import configparser, os
+
 from PySide6.QtWidgets import (
     QDialogButtonBox,
     QDialog,
     QVBoxLayout,
-    QHBoxLayout,
-    QGridLayout,
-    QGroupBox,
     QLabel,
     QLineEdit,
-    QPushButton,
     QMessageBox,
-    QFileDialog,
-    QComboBox,
-    QCheckBox
 )
 
 class DokumenttypHinzufuegen(QDialog):
@@ -41,7 +34,6 @@ class DokumenttypHinzufuegen(QDialog):
 
     def accept(self):
         # Name auf Eindeutigkeit prüfen
-        doppelt = False
         for dokument in self.dokumenttypen:
             if self.lineEditName.text() == dokument.name:
                 mb = QMessageBox(QMessageBox.Icon.Information, "Hinweis von SignoGDT", "Ein Dokumenttyp mit dem angegebenen Namen existiert bereits.", QMessageBox.StandardButton.Ok)
