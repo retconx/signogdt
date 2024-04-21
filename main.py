@@ -1,6 +1,9 @@
 import sys, configparser, os, datetime, shutil, logger, time, subprocess, re
 import xml.etree.ElementTree as ElementTree
-import gdt, gdttoolsL, class_dokumenttyp, class_smlDatei
+import gdt, class_dokumenttyp, class_smlDatei
+## Nur mit Lizenz
+import gdttoolsL
+## /Nur mit Lizenz
 import dialogEinstellungenGdt, dialogEinstellungenGdt, dialogEinstellungenLanrLizenzschluessel, dialogUeberSignoGdt, dialogEinstellungenAllgemein, dialogDokumenttypHinzufuegen, dialogWarten, dialogEula, dialogDokumenttypAuswaehlen
 from PySide6.QtCore import Qt, QTranslator, QLibraryInfo,QFileSystemWatcher
 from PySide6.QtGui import QFont, QAction, QIcon, QDesktopServices
@@ -109,6 +112,7 @@ class MainWindow(QMainWindow):
             ci_eulagelesen = configIni["Allgemein"]["eulagelesen"] == "True"
         # /Nachträglich hinzufefügte Options
 
+        ## Nur mit Lizenz
         # Prüfen, ob Lizenzschlüssel unverschlüsselt
         global ci_lizenzschluessel, ci_version
         if len(ci_lizenzschluessel) == 29:
@@ -118,6 +122,7 @@ class MainWindow(QMainWindow):
                     configIni.write(configfile)
         else:
             ci_lizenzschluessel = gdttoolsL.GdtToolsLizenzschluessel.dekrypt(ci_lizenzschluessel)
+        ## /Nur mit Lizenz
 
         # Prüfen, ob EULA gelesen
         if not ci_eulagelesen:
@@ -140,7 +145,9 @@ class MainWindow(QMainWindow):
             mb = QMessageBox(QMessageBox.Icon.Question, "Hinweis von SignoGDT", "Vermutlich starten Sie SignoGDT das erste Mal auf diesem PC.\nMöchten Sie jetzt die Grundeinstellungen vornehmen?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             mb.setDefaultButton(QMessageBox.StandardButton.Yes)
             if mb.exec() == QMessageBox.StandardButton.Yes:
+                ## Nur mit Lizenz
                 self.einstellungenLanrLizenzschluessel(False)
+                ## /Nur mit Lizenz
                 self.einstellungenGdt(False)
                 self.einstellungenAllgemein(False, True)
 
@@ -183,8 +190,12 @@ class MainWindow(QMainWindow):
             mb = QMessageBox(QMessageBox.Icon.Warning, "Hinweis von SignoGDT", "Problem beim Aktualisieren auf Version " + configIniBase["Allgemein"]["version"], QMessageBox.StandardButton.Ok)
             mb.exec()
 
+        self.addOnsFreigeschaltet = True
+        
+        ## Nur mit Lizenz
         # Add-Ons freigeschaltet?
         self.addOnsFreigeschaltet = gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(ci_lizenzschluessel, ci_lanr, gdttoolsL.SoftwareId.SIGNOGDT) or gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(ci_lizenzschluessel, ci_lanr, gdttoolsL.SoftwareId.SIGNOGDTPSEUDO)
+        ## Nur mit Lizenz
         
         jahr = datetime.datetime.now().year
         copyrightJahre = "2024"
@@ -280,8 +291,10 @@ class MainWindow(QMainWindow):
 
         mainLayoutH.addLayout(layoutSpalte1V)
         mainLayoutH.addLayout(layoutSpalte2V)
+        ## Nur mit Lizenz
         if self.addOnsFreigeschaltet and gdttoolsL.GdtToolsLizenzschluessel.getSoftwareId(ci_lizenzschluessel) == gdttoolsL.SoftwareId.SIGNOGDTPSEUDO:
             mainLayoutV.addWidget(self.labelPseudolizenz, alignment=Qt.AlignmentFlag.AlignCenter)
+        ## /Nur mit Lizenz
         mainLayoutV.addLayout(mainLayoutH)
         mainLayoutV.addWidget(self.buttonBox)
         self.widget.setLayout(mainLayoutV)
@@ -304,8 +317,10 @@ class MainWindow(QMainWindow):
         einstellungenAllgemeinAction.triggered.connect(lambda checked=False, neustartfrage=True: self.einstellungenAllgemein(checked, True))
         einstellungenGdtAction = QAction("GDT-Einstellungen", self)
         einstellungenGdtAction.triggered.connect(lambda checked=False, neustartfrage=True: self.einstellungenGdt(checked, True))
+        ## Nur mit Lizenz
         einstellungenErweiterungenAction = QAction("LANR/Lizenzschlüssel", self)
         einstellungenErweiterungenAction.triggered.connect(lambda checked=False, neustartfrage=True: self.einstellungenLanrLizenzschluessel(checked, True))
+        ## /Nur mit Lizenz
         hilfeMenu = menubar.addMenu("Hilfe")
         hilfeWikiAction = QAction("SignoGDT Wiki", self)
         hilfeWikiAction.triggered.connect(self.signogdtWiki) 
@@ -323,7 +338,9 @@ class MainWindow(QMainWindow):
         anwendungMenu.addAction(updateAction)
         einstellungenMenu.addAction(einstellungenAllgemeinAction)
         einstellungenMenu.addAction(einstellungenGdtAction)
+        ## Nur mit Lizenz
         einstellungenMenu.addAction(einstellungenErweiterungenAction)
+        ## /Nur mit Lizenz
         hilfeMenu.addAction(hilfeWikiAction)
         hilfeMenu.addSeparator()
         hilfeMenu.addAction(hilfeUpdateAction)
@@ -426,6 +443,7 @@ class MainWindow(QMainWindow):
                     else: 
                         os.execl(sys.executable, *sys.argv)
 
+    ## Nur mit Lizenz
     def einstellungenLanrLizenzschluessel(self, checked, neustartfrage = False):
         de = dialogEinstellungenLanrLizenzschluessel.EinstellungenProgrammerweiterungen(ci_pfad)
         if de.exec() == 1:
@@ -443,6 +461,7 @@ class MainWindow(QMainWindow):
                         os.execl(sys.executable, __file__, *sys.argv)
                     else: 
                         os.execl(sys.executable, *sys.argv)
+    ## /Nur mit Lizenz
     
     def signogdtWiki(self, link):
         QDesktopServices.openUrl("https://github.com/retconx/signogdt/wiki")
