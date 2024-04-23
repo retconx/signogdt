@@ -146,10 +146,13 @@ class MainWindow(QMainWindow):
             mb.setDefaultButton(QMessageBox.StandardButton.Yes)
             if mb.exec() == QMessageBox.StandardButton.Yes:
                 ## Nur mit Lizenz
-                self.einstellungenLanrLizenzschluessel(False)
+                self.einstellungenLanrLizenzschluessel(False, False)
                 ## /Nur mit Lizenz
-                self.einstellungenGdt(False)
-                self.einstellungenAllgemein(False, True)
+                self.einstellungenGdt(False, False)
+                self.einstellungenAllgemein(False, False)
+                mb = QMessageBox(QMessageBox.Icon.Warning, "Hinweis von SignoGDT", "Die Ersteinrichtung ist abgeschlossen. SignoGDT wird beendet.", QMessageBox.StandardButton.Ok)
+                mb.exec()
+                sys.exit()
 
         # Version vergleichen und gegebenenfalls aktualisieren
         configIniBase = configparser.ConfigParser()
@@ -314,12 +317,12 @@ class MainWindow(QMainWindow):
         updateAction.triggered.connect(self.updatePruefung) # type: ignore
         einstellungenMenu = menubar.addMenu("Einstellungen")
         einstellungenAllgemeinAction = QAction("Allgemeine Einstellungen", self)
-        einstellungenAllgemeinAction.triggered.connect(lambda checked=False, neustartfrage=True: self.einstellungenAllgemein(checked, True))
+        einstellungenAllgemeinAction.triggered.connect(lambda checked = False, neustartfrage = True: self.einstellungenAllgemein(checked, neustartfrage))
         einstellungenGdtAction = QAction("GDT-Einstellungen", self)
-        einstellungenGdtAction.triggered.connect(lambda checked=False, neustartfrage=True: self.einstellungenGdt(checked, True))
+        einstellungenGdtAction.triggered.connect(lambda checked = False, neustartfrage = True: self.einstellungenGdt(checked, neustartfrage))
         ## Nur mit Lizenz
         einstellungenErweiterungenAction = QAction("LANR/Lizenzschlüssel", self)
-        einstellungenErweiterungenAction.triggered.connect(lambda checked=False, neustartfrage=True: self.einstellungenLanrLizenzschluessel(checked, True))
+        einstellungenErweiterungenAction.triggered.connect(lambda checked = False, neustartfrage = True: self.einstellungenLanrLizenzschluessel(checked, neustartfrage))
         ## /Nur mit Lizenz
         hilfeMenu = menubar.addMenu("Hilfe")
         hilfeWikiAction = QAction("SignoGDT Wiki", self)
@@ -397,7 +400,7 @@ class MainWindow(QMainWindow):
             mb = QMessageBox(QMessageBox.Icon.Warning, "Hinweis von SignoGDT", "Das Log-Verzeichnis wurde nicht gefunden.", QMessageBox.StandardButton.Ok)
             mb.exec() 
 
-    def einstellungenAllgemein(self, checked, neustartfrage = False):
+    def einstellungenAllgemein(self, checked, neustartfrage):
         de = dialogEinstellungenAllgemein.EinstellungenAllgemein(ci_pfad)
         if de.exec() == 1:
             configIni["Allgemein"]["signosignpfad"] = de.lineEditSignoSignPfad.text()
@@ -420,7 +423,7 @@ class MainWindow(QMainWindow):
                         os.execl(sys.executable, *sys.argv)
 
 
-    def einstellungenGdt(self, checked, neustartfrage = False):
+    def einstellungenGdt(self, checked, neustartfrage):
         de = dialogEinstellungenGdt.EinstellungenGdt(ci_pfad)
         if de.exec() == 1:
             configIni["GDT"]["idsignogdt"] = de.lineEditSignoGdtId.text()
@@ -444,7 +447,7 @@ class MainWindow(QMainWindow):
                         os.execl(sys.executable, *sys.argv)
 
     ## Nur mit Lizenz
-    def einstellungenLanrLizenzschluessel(self, checked, neustartfrage = False):
+    def einstellungenLanrLizenzschluessel(self, checked, neustartfrage):
         de = dialogEinstellungenLanrLizenzschluessel.EinstellungenProgrammerweiterungen(ci_pfad)
         if de.exec() == 1:
             configIni["Erweiterungen"]["lanr"] = de.lineEditLanr.text()
