@@ -1,4 +1,4 @@
-import configparser, os, re
+import configparser, os, sys
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QDialogButtonBox,
@@ -31,6 +31,8 @@ class EinstellungenAllgemein(QDialog):
         self.signoSignArchivierungsname = configIni["Allgemein"]["signosignarchivierungsname"]
         self.deleteAfterOpen = configIni["Allgemein"]["deleteafteropen"] == "True"
         self.backupverzeichnis = configIni["Allgemein"]["backupverzeichnis"]
+        self.autoupdate = configIni["Allgemein"]["autoupdate"] == "True"
+        self.updaterpfad = configIni["Allgemein"]["updaterpfad"]
         self.setWindowTitle("Allgemeine Einstellungen")
         self.buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setText("Abbrechen")
@@ -64,8 +66,6 @@ class EinstellungenAllgemein(QDialog):
         labelArchivierungsname.setFont(self.fontNormal)
         self.lineEditArchivierungsname = QLineEdit(self.signoSignArchivierungsname)
         self.lineEditArchivierungsname.setFont(self.fontNormal)
-        self.checkBoxDeleteAfterOpen = QCheckBox("SML-Datei nach Einlesen löschen")
-        self.checkBoxDeleteAfterOpen.setChecked(self.deleteAfterOpen)
         dialogLayoutGroupboxSignoSignG.addWidget(labelSignoSignPfad, 0, 0, 1, 2)
         dialogLayoutGroupboxSignoSignG.addWidget(self.lineEditSignoSignPfad, 1, 0, 1, 1)
         dialogLayoutGroupboxSignoSignG.addWidget(self.pushButtonSignoSignPfadDurchsuchen, 1, 1, 1, 1)
@@ -74,7 +74,6 @@ class EinstellungenAllgemein(QDialog):
         dialogLayoutGroupboxSignoSignG.addWidget(self.pushButtonSignoSignArchivverzeichnisDurchsuchen, 3, 1, 1, 1)
         dialogLayoutGroupboxSignoSignG.addWidget(labelArchivierungsname, 4, 0, 1, 2)
         dialogLayoutGroupboxSignoSignG.addWidget(self.lineEditArchivierungsname, 5, 0, 1, 2)
-        dialogLayoutGroupboxSignoSignG.addWidget(self.checkBoxDeleteAfterOpen, 6, 0, 1, 2)
 
         # GroupBox SignoGDT
         groupBoxSignoGdt = QGroupBox("SignoGDT")
@@ -88,13 +87,41 @@ class EinstellungenAllgemein(QDialog):
         self.pushButtonBackupverzeichnisDurchsuchen = QPushButton("...")
         self.pushButtonBackupverzeichnisDurchsuchen.setFont(self.fontNormal)
         self.pushButtonBackupverzeichnisDurchsuchen.clicked.connect(self.pushButtonBackupverzeichnisDurchsuchenClicked)
+        self.checkBoxDeleteAfterOpen = QCheckBox("SML-Datei nach Einlesen löschen")
+        self.checkBoxDeleteAfterOpen.setChecked(self.deleteAfterOpen)
+        self.checkBoxDeleteAfterOpen.setFont(self.fontNormal)
         dialogLayoutGroupboxSignoGdtG.addWidget(labelBackupverzeichnis, 0, 0, 1, 2)
         dialogLayoutGroupboxSignoGdtG.addWidget(self.lineEditBackupverzeichnis, 1, 0, 1, 1)
         dialogLayoutGroupboxSignoGdtG.addWidget(self.pushButtonBackupverzeichnisDurchsuchen, 1, 1, 1, 1)
+        dialogLayoutGroupboxSignoGdtG.addWidget(self.checkBoxDeleteAfterOpen)
+
+        # GroupBox Updates
+        groupBoxUpdatesLayoutG = QGridLayout()
+        groupBoxUpdates = QGroupBox("Updates")
+        groupBoxUpdates.setFont(self.fontBold)
+        labelUpdaterPfad = QLabel("Updater-Pfad")
+        labelUpdaterPfad.setFont(self.fontNormal)
+        self.lineEditUpdaterPfad= QLineEdit(self.updaterpfad)
+        self.lineEditUpdaterPfad.setFont(self.fontNormal)
+        self.lineEditUpdaterPfad.setToolTip(self.updaterpfad)
+        if not os.path.exists(self.updaterpfad):
+            self.lineEditUpdaterPfad.setStyleSheet("background:rgb(255,200,200)")
+        self.pushButtonUpdaterPfad = QPushButton("...")
+        self.pushButtonUpdaterPfad.setFont(self.fontNormal)
+        self.pushButtonUpdaterPfad.setToolTip("Pfad zum GDT-Tools Updater auswählen")
+        self.pushButtonUpdaterPfad.clicked.connect(self.pushButtonUpdaterPfadClicked)
+        self.checkBoxAutoUpdate = QCheckBox("Automatisch auf Update prüfen")
+        self.checkBoxAutoUpdate.setFont(self.fontNormal)
+        self.checkBoxAutoUpdate.setChecked(self.autoupdate)
+        groupBoxUpdatesLayoutG.addWidget(labelUpdaterPfad, 0, 0)
+        groupBoxUpdatesLayoutG.addWidget(self.lineEditUpdaterPfad, 0, 1)
+        groupBoxUpdatesLayoutG.addWidget(self.pushButtonUpdaterPfad, 0, 2)
+        groupBoxUpdatesLayoutG.addWidget(self.checkBoxAutoUpdate, 1, 0)
+        groupBoxUpdates.setLayout(groupBoxUpdatesLayoutG)
 
         dialogLayoutV.addWidget(groupBoxSignoSign)
         dialogLayoutV.addWidget(groupBoxSignoGdt)
-        dialogLayoutV.addWidget(self.checkBoxDeleteAfterOpen)
+        dialogLayoutV.addWidget(groupBoxUpdates)
         dialogLayoutV.addWidget(self.buttonBox)
         dialogLayoutV.setSpacing(20)
         self.setLayout(dialogLayoutV)
@@ -136,6 +163,24 @@ class EinstellungenAllgemein(QDialog):
         if fd.exec() == 1:
             self.lineEditBackupverzeichnis.setText(fd.directory().path())
             self.backupverzeichnis = fd.directory().path()
+    
+    def pushButtonUpdaterPfadClicked(self):
+        fd = QFileDialog(self)
+        fd.setFileMode(QFileDialog.FileMode.ExistingFile)
+        if os.path.exists(self.lineEditUpdaterPfad.text()):
+            fd.setDirectory(os.path.dirname(self.lineEditUpdaterPfad.text()))
+        fd.setWindowTitle("Updater-Pfad auswählen")
+        fd.setModal(True)
+        if "win32" in sys.platform:
+            fd.setNameFilters(["exe-Dateien (*.exe)"])
+        elif "darwin" in sys.platform:
+            fd.setNameFilters(["app-Bundles (*.app)"])
+        fd.setLabelText(QFileDialog.DialogLabel.Accept, "Auswählen")
+        fd.setLabelText(QFileDialog.DialogLabel.Reject, "Abbrechen")
+        if fd.exec() == 1:
+            self.lineEditUpdaterPfad.setText(fd.selectedFiles()[0])
+            self.lineEditUpdaterPfad.setToolTip(fd.selectedFiles()[0])
+            self.lineEditUpdaterPfad.setStyleSheet("background:rgb(255,255,255)")
 
     def accept(self):
         if self.lineEditArchivierungsname.text()[-4:] == ".pdf":
