@@ -296,7 +296,6 @@ class MainWindow(QMainWindow):
         layoutSpalte2V.addLayout(layoutSpalte2G)
 
         self.buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(self.addOnsFreigeschaltet)
         self.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setText("Schließen")
         self.buttonBox.accepted.connect(self.accept) # type: ignore
         self.buttonBox.rejected.connect(self.reject) # type: ignore
@@ -309,6 +308,17 @@ class MainWindow(QMainWindow):
         ## /Nur mit Lizenz
         mainLayoutV.addLayout(mainLayoutH)
         mainLayoutV.addWidget(self.buttonBox)
+        ## Nur mit Lizenz
+        if self.addOnsFreigeschaltet:
+            gueltigeLizenztage = gdttoolsL.GdtToolsLizenzschluessel.nochTageGueltig(ci_lizenzschluessel)
+            if gueltigeLizenztage  > 0 and gueltigeLizenztage <= 30:
+                labelLizenzLaeuftAus = QLabel("Die genutzte Lizenz ist noch " + str(gueltigeLizenztage) + " Tage gültig.")
+                labelLizenzLaeuftAus.setStyleSheet("color:rgb(200,0,0)")
+                mainLayoutV.addWidget(labelLizenzLaeuftAus, alignment=Qt.AlignmentFlag.AlignCenter)
+        else:
+            self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(False)
+            self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setText("Keine gültige Lizenz")
+        ## /Nur mit Lizenz
         self.widget.setLayout(mainLayoutV)
         self.setCentralWidget(self.widget)
 
@@ -566,8 +576,8 @@ class MainWindow(QMainWindow):
         fd.setLabelText(QFileDialog.DialogLabel.Accept, "Ok")
         fd.setLabelText(QFileDialog.DialogLabel.Reject, "Abbrechen")
         if fd.exec() == 1:
-            self.lineEditDateipfade[dateipfadNr].setText(fd.selectedFiles()[0])
-            self.lineEditDateipfade[dateipfadNr].setToolTip(fd.selectedFiles()[0])
+            self.lineEditDateipfade[dateipfadNr].setText(os.path.abspath(fd.selectedFiles()[0]))
+            self.lineEditDateipfade[dateipfadNr].setToolTip(os.path.abspath(fd.selectedFiles()[0]))
             self.lineEditDateipfadeEditingFinished(dateipfadNr)
 
     def pushButtonVariableEinfuegenClicked(self, checked, variablenNr:int):

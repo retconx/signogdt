@@ -46,6 +46,7 @@ class EinstellungenProgrammerweiterungen(QDialog):
         groupboxLizenzschluessel.setStyleSheet("font-weight:bold")
         self.lineEditLizenzschluessel = QLineEdit(self.lizenzschluessel)
         self.lineEditLizenzschluessel.setStyleSheet("font-weight:normal")
+        self.lineEditLizenzschluessel.textEdited.connect(self.lineEditLizenzschluesselTextEdited)
         groupboxLayoutLizenzschluessel.addWidget(self.lineEditLizenzschluessel)
         groupboxLizenzschluessel.setLayout(groupboxLayoutLizenzschluessel)
         dialogLayoutV.addWidget(groupboxLanr)
@@ -54,8 +55,18 @@ class EinstellungenProgrammerweiterungen(QDialog):
         dialogLayoutV.setContentsMargins(10, 10, 10, 10)
         dialogLayoutV.setSpacing(20)
         self.setLayout(dialogLayoutV)
-        self.lineEditLanr.setFocus()
-        self.lineEditLanr.selectAll()
+        if re.match(reLizenzschluessel, self.lineEditLizenzschluessel.text()) != None and gdttoolsL.GdtToolsLizenzschluessel.nochTageGueltig(self.lizenzschluessel) <= 0:
+            mb = QMessageBox(QMessageBox.Icon.Information, "Hinweis", "Der eingetragene Lizenzschlüssel ist abgelaufen.", QMessageBox.StandardButton.Ok)
+            mb.exec()  
+            self.lineEditLizenzschluessel.setStyleSheet("font-weight:normal;background:rgb(255,220,220)")
+            self.lineEditLizenzschluessel.setFocus()
+            self.lineEditLizenzschluessel.selectAll()
+        else:
+            self.lineEditLanr.setFocus()
+            self.lineEditLanr.selectAll()
+
+    def lineEditLizenzschluesselTextEdited(self):
+        self.lineEditLizenzschluessel.setStyleSheet("font-weight:normal;background:rgb(255,255,255)")
 
     def accept(self):
         if self.lineEditLanr.text() == "" and self.lineEditLizenzschluessel.text() == "":

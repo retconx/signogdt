@@ -137,8 +137,8 @@ class EinstellungenGdt(QDialog):
         fd.setLabelText(QFileDialog.DialogLabel.Accept, "Ok")
         fd.setLabelText(QFileDialog.DialogLabel.Reject, "Abbrechen")
         if fd.exec() == 1:
-            self.lineEditImport.setText(fd.directory().path())
-            self.gdtAustauschVerzeichnis = fd.directory().path()
+            self.lineEditImport.setText(os.path.abspath(fd.directory().path()))
+            self.gdtAustauschVerzeichnis = os.path.abspath(fd.directory().path())
 
     def zeichensatzGewechselt(self):
         self.aktuelleZeichensatznummer = self.combobxZeichensatz.currentIndex()

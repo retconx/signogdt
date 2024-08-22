@@ -137,8 +137,9 @@ class EinstellungenAllgemein(QDialog):
         fd.setLabelText(QFileDialog.DialogLabel.Accept, "Ok")
         fd.setLabelText(QFileDialog.DialogLabel.Reject, "Abbrechen")
         if fd.exec() == 1:
-            self.lineEditSignoSignPfad.setText(fd.selectedFiles()[0])
-            self.signoSignPfad = fd.selectedFiles()[0]
+            self.lineEditSignoSignPfad.setText(os.path.abspath(fd.selectedFiles()[0]))
+            self.lineEditSignoSignPfad.setToolTip(os.path.abspath(fd.selectedFiles()[0]))
+            self.signoSignPfad = os.path.abspath(fd.selectedFiles()[0])
 
     def pushButtonSignoSignArchivverzeichnisDurchsuchenClicked(self):
         fd = QFileDialog(self)
@@ -149,8 +150,9 @@ class EinstellungenAllgemein(QDialog):
         fd.setLabelText(QFileDialog.DialogLabel.Accept, "Ok")
         fd.setLabelText(QFileDialog.DialogLabel.Reject, "Abbrechen")
         if fd.exec() == 1:
-            self.lineEditArchivverzeichnis.setText(fd.directory().path())
-            self.signoSignArchivverzeichnis = fd.directory().path()
+            self.lineEditArchivverzeichnis.setText(os.path.abspath(fd.directory().path()))
+            self.lineEditArchivverzeichnis.setToolTip(os.path.abspath(fd.directory().path()))
+            self.signoSignArchivverzeichnis = os.path.abspath(fd.directory().path())
 
     def pushButtonBackupverzeichnisDurchsuchenClicked(self):
         fd = QFileDialog(self)
@@ -161,8 +163,9 @@ class EinstellungenAllgemein(QDialog):
         fd.setLabelText(QFileDialog.DialogLabel.Accept, "Ok")
         fd.setLabelText(QFileDialog.DialogLabel.Reject, "Abbrechen")
         if fd.exec() == 1:
-            self.lineEditBackupverzeichnis.setText(fd.directory().path())
-            self.backupverzeichnis = fd.directory().path()
+            self.lineEditBackupverzeichnis.setText(os.path.abspath(fd.directory().path()))
+            self.lineEditBackupverzeichnis.setToolTip(os.path.abspath(fd.directory().path()))
+            self.backupverzeichnis = os.path.abspath(fd.directory().path())
     
     def pushButtonUpdaterPfadClicked(self):
         fd = QFileDialog(self)
@@ -178,8 +181,8 @@ class EinstellungenAllgemein(QDialog):
         fd.setLabelText(QFileDialog.DialogLabel.Accept, "Auswählen")
         fd.setLabelText(QFileDialog.DialogLabel.Reject, "Abbrechen")
         if fd.exec() == 1:
-            self.lineEditUpdaterPfad.setText(fd.selectedFiles()[0])
-            self.lineEditUpdaterPfad.setToolTip(fd.selectedFiles()[0])
+            self.lineEditUpdaterPfad.setText(os.path.abspath(fd.selectedFiles()[0]))
+            self.lineEditUpdaterPfad.setToolTip(os.path.abspath(fd.selectedFiles()[0]))
             self.lineEditUpdaterPfad.setStyleSheet("background:rgb(255,255,255)")
 
     def accept(self):
