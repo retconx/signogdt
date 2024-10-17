@@ -435,7 +435,7 @@ class MainWindow(QMainWindow):
         logger.logger.info("Programmverzeichnis: " + programmverzeichnis)
         try:
             if "win32" in sys.platform:
-                subprocess.Popen([self.updaterpfad, "signogdt", self.version, programmverzeichnis], creationflags=subprocess.DETACHED_PROCESS) # type: ignore
+                subprocess.Popen([self.updaterpfad, "signogdt", ci_version, programmverzeichnis], creationflags=subprocess.DETACHED_PROCESS) # type: ignore
             elif "darwin" in sys.platform:
                 subprocess.Popen(["open", "-a", self.updaterpfad, "--args", "signogdt", ci_version, programmverzeichnis])
             elif "linux" in sys.platform:
