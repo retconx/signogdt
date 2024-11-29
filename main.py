@@ -30,7 +30,7 @@ import requests
 
 basedir = os.path.dirname(__file__)
 reGdtFeldkennung = r"^\d{4}$"
-variablenInhalte = ["ID (FK 3000)", "Vorname (FK 3102)", "Nachname (FK 3101)", "Geburtsdatum (FK 3103)", "Straße (FK 3107)", "Wohnort (FK 3106)", "Körpergröße (FK 3122)", "Körpergewicht (FK 3123)"]
+variablenInhalte = ["ID (FK 3000)", "Vorname (FK 3102)", "Nachname (FK 3101)", "Geburtsdatum (FK 3103)", "Straße (FK 3107)", "Wohnort (FK 3106)", "Körpergröße (FK 3122)", "Körpergewicht (FK 3123)", "E-Mail-Adresse (FK 3619)", "Telefonnummer fest (FK 3626)", "Telefonnummer mobil (FK 3618)"]
 datumsfeldkennungen = ["3103"]
 
 def versionVeraltet(versionAktuell:str, versionVergleich:str):
