@@ -4,7 +4,7 @@ import gdt, class_dokumenttyp, class_smlDatei
 ## Nur mit Lizenz
 import gdttoolsL
 ## /Nur mit Lizenz
-import dialogEinstellungenGdt, dialogEinstellungenGdt, dialogEinstellungenLanrLizenzschluessel, dialogUeberSignoGdt, dialogEinstellungenAllgemein, dialogDokumenttypHinzufuegen, dialogWarten, dialogEula, dialogDokumenttypAuswaehlen
+import dialogEinstellungenGdt, dialogEinstellungenGdt, dialogEinstellungenLanrLizenzschluessel, dialogUeberSignoGdt, dialogEinstellungenAllgemein, dialogDokumenttypHinzufuegenBearbeiten, dialogWarten, dialogEula, dialogDokumenttypAuswaehlen
 from PySide6.QtCore import Qt, QTranslator, QLibraryInfo,QFileSystemWatcher
 from PySide6.QtGui import QFont, QAction, QIcon, QDesktopServices
 from PySide6.QtWidgets import (
@@ -117,6 +117,13 @@ class MainWindow(QMainWindow):
             self.autoupdate = configIni["Allgemein"]["autoupdate"] == "True"
         if configIni.has_option("Allgemein", "updaterpfad"):
             self.updaterpfad = configIni["Allgemein"]["updaterpfad"]
+        # 1.5.0
+        self.dokumenttypKategorien = ["Standard"]
+        self.maximaleKategoriespalten = 5
+        if configIni.has_option("Allgemein", "dokumenttypkategorien"):
+            self.dokumenttypKategorien = str.split(configIni["Allgemein"]["dokumenttypkategorien"], "::")
+        if configIni.has_option("Allgemein", "maximalekategoriespalten"):
+            self.maximaleKategoriespalten = int(configIni["Allgemein"]["maximalekategoriespalten"])
         # /Nachträglich hinzufefügte Options
 
         ## Nur mit Lizenz
@@ -175,6 +182,11 @@ class MainWindow(QMainWindow):
                     configIni["Allgemein"]["autoupdate"] = "True"
                 if not configIni.has_option("Allgemein", "updaterpfad"):
                     configIni["Allgemein"]["updaterpfad"] = ""
+                # 1.4.0 -> 1.5.0
+                if not configIni.has_option("Allgemein", "dokumenttypkategorien"):
+                    configIni["Allgemein"]["dokumenttypkategorien"] = "Standard"
+                if not configIni.has_option("Allgemein", "maximalekategoriespalten"):
+                    configIni["Allgemein"]["maximalekategoriespalten"] = "5"
                 # /config.ini aktualisieren
 
                 with open(os.path.join(ci_pfad, "config.ini"), "w") as configfile:
@@ -237,6 +249,7 @@ class MainWindow(QMainWindow):
         ## Formularaufbau
         mainLayoutV = QVBoxLayout()
         mainLayoutH = QHBoxLayout()
+        layoutSpalte1ButtonsH = QHBoxLayout()
         layoutSpalte1V = QVBoxLayout()
         layoutSpalte2V = QVBoxLayout()
         layoutSpalte2G = QGridLayout()
@@ -247,18 +260,30 @@ class MainWindow(QMainWindow):
         self.pushButtonDokumenttypHinzufuegen = QPushButton("Neu...")
         self.pushButtonDokumenttypHinzufuegen.setToolTip("Dokumenttyp hinzufügen")
         self.pushButtonDokumenttypHinzufuegen.clicked.connect(self.pushButtonDokumenttypHinzufuegenClicked)
+        self.pushButtonDokumenttypBearbeiten = QPushButton("Bearbeiten...")
+        self.pushButtonDokumenttypBearbeiten.setToolTip("Ausgewählten Dokumenttyp bearbeiten")
+        self.pushButtonDokumenttypBearbeiten.clicked.connect(self.pushButtonDokumenttypBearbeitenClicked)
+        self.pushButtonDokumenttypEntfernen = QPushButton("Entfernen...")
+        self.pushButtonDokumenttypEntfernen.setToolTip("Ausgewählten Dokumenttyp entfernen")
+        self.pushButtonDokumenttypEntfernen.clicked.connect(self.pushButtonDokumenttypEntfernenClicked)
+        self.pushButtonDokumenttypKopieren = QPushButton("Kopieren")
+        self.pushButtonDokumenttypKopieren.setToolTip("Ausgewählten Dokumenttyp kopieren")
+        self.pushButtonDokumenttypKopieren.clicked.connect(self.pushButtonDokumenttypKopierenClicked)
         self.listWidgetDokumenttypen = QListWidget()
         self.listWidgetDokumenttypen.currentItemChanged.connect(self.aktualisiereFormular)
         self.listWidgetDokumenttypen.setEditTriggers(QAbstractItemView.EditTrigger.SelectedClicked | QAbstractItemView.EditTrigger.DoubleClicked)
+        self.listWidgetDokumenttypen.doubleClicked.connect(self.listWidgetDokumenttypenDoubleClicked)
         self.dokumenttypen = class_dokumenttyp.getAlleDokumenttypen(os.path.join(updateSafePath, "dokumenttypen.xml"))
         i = 0
         for dokumenttyp in self.dokumenttypen:
-            self.listWidgetDokumenttypen.addItem(dokumenttyp.getName())
-            self.listWidgetDokumenttypen.item(i).setFlags(self.listWidgetDokumenttypen.item(i).flags() | Qt.ItemFlag.ItemIsEditable)
+            self.listWidgetDokumenttypen.addItem(dokumenttyp.getName() + " (" + dokumenttyp.getKategorie() + ")")
             i += 1
-        self.listWidgetDokumenttypen.itemChanged.connect(self.listWidgetDokumenttypenItemChanged)
         layoutSpalte1V.addWidget(labelDokumenttypen)
-        layoutSpalte1V.addWidget(self.pushButtonDokumenttypHinzufuegen)
+        layoutSpalte1ButtonsH.addWidget(self.pushButtonDokumenttypHinzufuegen)
+        layoutSpalte1ButtonsH.addWidget(self.pushButtonDokumenttypBearbeiten)
+        layoutSpalte1ButtonsH.addWidget(self.pushButtonDokumenttypEntfernen)
+        layoutSpalte1ButtonsH.addWidget(self.pushButtonDokumenttypKopieren)
+        layoutSpalte1V.addLayout(layoutSpalte1ButtonsH)
         layoutSpalte1V.addWidget(self.listWidgetDokumenttypen)
         # Dateipfade, Variablen
         labelDateipfade = QLabel("Dateipfade:")
@@ -488,6 +513,10 @@ class MainWindow(QMainWindow):
             configIni["Allgemein"]["backupverzeichnis"] = de.lineEditBackupverzeichnis.text()
             configIni["Allgemein"]["updaterpfad"] = de.lineEditUpdaterPfad.text()
             configIni["Allgemein"]["autoupdate"] = str(de.checkBoxAutoUpdate.isChecked())
+            dtk = []
+            for i in range(de.comboBoxDokumenttypKategorien.count()):
+                dtk.append(de.comboBoxDokumenttypKategorien.itemText(i))
+            configIni["Allgemein"]["dokumenttypkategorien"] = "::".join(dtk)
 
             with open(os.path.join(ci_pfad, "config.ini"), "w") as configfile:
                 configIni.write(configfile)
@@ -553,14 +582,52 @@ class MainWindow(QMainWindow):
         QDesktopServices.openUrl(link)
 
     def pushButtonDokumenttypHinzufuegenClicked(self):
-        ddh = dialogDokumenttypHinzufuegen.DokumenttypHinzufuegen(self.dokumenttypen)
-        if ddh.exec() == 1 and ddh.lineEditName.text().strip() != "":
-            self.listWidgetDokumenttypen.addItem(ddh.lineEditName.text())
+        ddh = dialogDokumenttypHinzufuegenBearbeiten.DokumenttypHinzufuegenBearbeiten(ci_pfad, self.dokumenttypen, "")
+        if ddh.exec() == 1:
+            self.listWidgetDokumenttypen.addItem(ddh.lineEditName.text() + " (" + ddh.comboBoxKategorie.currentText() + ")")
             dokumenttypNummer = self.listWidgetDokumenttypen.count() - 1
             self.listWidgetDokumenttypen.setCurrentRow(dokumenttypNummer)
-            self.dokumenttypen.append(class_dokumenttyp.Dokumenttyp(ddh.lineEditName.text(), [], []))
+            self.dokumenttypen.append(class_dokumenttyp.Dokumenttyp(ddh.lineEditName.text(), ddh.comboBoxKategorie.currentText(), [], []))
+            self.ungesicherteAenderungen = True
             self.aktualisiereFormular()
-            self.listWidgetDokumenttypen.item(dokumenttypNummer).setFlags(self.listWidgetDokumenttypen.item(dokumenttypNummer).flags() | Qt.ItemFlag.ItemIsEditable)
+
+    def pushButtonDokumenttypBearbeitenClicked(self):
+        ddb = dialogDokumenttypHinzufuegenBearbeiten.DokumenttypHinzufuegenBearbeiten(ci_pfad, self.dokumenttypen, self.listWidgetDokumenttypen.currentItem().text())
+        if ddb.exec() == 1:
+            self.listWidgetDokumenttypen.currentItem().setText(ddb.lineEditName.text() + " (" + ddb.comboBoxKategorie.currentText() + ")")
+            self.dokumenttypen[ddb.gefundenerDokumenttypindex].setName(ddb.lineEditName.text())
+            self.dokumenttypen[ddb.gefundenerDokumenttypindex].setKategorie(ddb.comboBoxKategorie.currentText())
+            self.listWidgetDokumenttypen.item(self.listWidgetDokumenttypen.currentRow()).setText(ddb.lineEditName.text() + " (" + ddb.comboBoxKategorie.currentText() + ")")
+            self.ungesicherteAenderungen = True
+            self.aktualisiereFormular()
+
+    def pushButtonDokumenttypEntfernenClicked(self):
+        mb = QMessageBox(QMessageBox.Icon.Question, "Hinweis von SignoGDT", "Soll der Dokumenttyp \"" + self.listWidgetDokumenttypen.currentItem().text()[:self.listWidgetDokumenttypen.currentItem().text().index(" (")] + "\" entfernt werden?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        mb.setDefaultButton(QMessageBox.StandardButton.No)
+        mb.button(QMessageBox.StandardButton.Yes).setText("Ja")
+        mb.button(QMessageBox.StandardButton.No).setText("Nein")
+        if mb.exec() == QMessageBox.StandardButton.Yes:
+            self.dokumenttypen.pop(self.listWidgetDokumenttypen.currentRow())
+            self.listWidgetDokumenttypen.takeItem(self.listWidgetDokumenttypen.currentRow())
+            self.ungesicherteAenderungen = True
+            self.aktualisiereFormular()
+
+    def pushButtonDokumenttypKopierenClicked(self):
+        gewaehlterName = self.listWidgetDokumenttypen.currentItem().text()[:self.listWidgetDokumenttypen.currentItem().text().index(" (")]
+        gewaelteKategorie = self.listWidgetDokumenttypen.currentItem().text()[self.listWidgetDokumenttypen.currentItem().text().index("(") + 1:-1]
+        gewaehlterDokumenttyp = None
+        for dt in self.dokumenttypen:
+            if dt.getName() == gewaehlterName and dt.getKategorie() == gewaelteKategorie:
+                gewaehlterDokumenttyp = dt
+        self.listWidgetDokumenttypen.addItem(gewaehlterDokumenttyp.getName() + " - Kopie (" + gewaehlterDokumenttyp.getKategorie() + ")") # type: ignore
+        dokumenttypNummer = self.listWidgetDokumenttypen.count() - 1
+        self.listWidgetDokumenttypen.setCurrentRow(dokumenttypNummer)
+        self.dokumenttypen.append(class_dokumenttyp.Dokumenttyp(gewaehlterDokumenttyp.getName() + " - Kopie", gewaehlterDokumenttyp.getKategorie(), gewaehlterDokumenttyp.getDateipfade().copy(), gewaehlterDokumenttyp.getVariablen().copy())) # type: ignore
+        self.ungesicherteAenderungen = True
+        self.aktualisiereFormular()
+
+    def listWidgetDokumenttypenDoubleClicked(self):
+        self.pushButtonDokumenttypBearbeitenClicked()
 
     def comboBoxVariableninhalteChanged(self):
         for i in range(10):
@@ -594,13 +661,14 @@ class MainWindow(QMainWindow):
         for i in range(10):
             self.lineEditDateipfade[i].setText("")
             self.lineEditVariable[i].setText("")
-        if self.listWidgetDokumenttypen.count() > 0:
-            dokumenttypName = self.listWidgetDokumenttypen.currentItem().text()
+        if self.listWidgetDokumenttypen.currentRow() >= 0:
+            dokumenttypName = self.listWidgetDokumenttypen.currentItem().text()[:self.listWidgetDokumenttypen.currentItem().text().index(" (")]
+            dokumenttypKategorie = self.listWidgetDokumenttypen.currentItem().text()[self.listWidgetDokumenttypen.currentItem().text().index("(") + 1:-1]
             gesuchterDokumenttyp = None
             gesuchterDokumenttypNummer = 0
             for dokumenttyp in self.dokumenttypen:
-                if dokumenttyp.name == dokumenttypName:
-                    gesuchterDokumenttyp = class_dokumenttyp.Dokumenttyp(dokumenttyp.name, dokumenttyp.getDateipfade().copy(), dokumenttyp.getVariablen().copy())
+                if dokumenttyp.getName() == dokumenttypName and dokumenttyp.getKategorie() == dokumenttypKategorie:
+                    gesuchterDokumenttyp = class_dokumenttyp.Dokumenttyp(dokumenttyp.getName(), dokumenttyp.getKategorie(), dokumenttyp.getDateipfade().copy(), dokumenttyp.getVariablen().copy())
                     break
                 gesuchterDokumenttypNummer += 1
             if gesuchterDokumenttyp != None:
@@ -616,39 +684,6 @@ class MainWindow(QMainWindow):
                     nr += 1
             else:
                 logger.logger.error("Fehler in def aktualisiereFormular: Dokumenttyp " + dokumenttypName + " nicht in self.dokumenttypen gefunden")
-
-    # Änderung der Dokumenttypen
-    def listWidgetDokumenttypenItemChanged(self, item):
-        currentRow = self.listWidgetDokumenttypen.currentRow()
-        i = 0
-        doppelt = False
-        for dokumenttyp in self.dokumenttypen:
-            if item.text() == dokumenttyp.getName() and i != currentRow:
-                mb = QMessageBox(QMessageBox.Icon.Warning, "Hinweis von SignoGDT", "Die Dokumenttypbezeichnung muss eindeutig sein.", QMessageBox.StandardButton.Ok)
-                mb.exec()
-                self.listWidgetDokumenttypen.item(currentRow).setText(self.dokumenttypen[currentRow].getName())
-                doppelt = True
-                break
-            i += 1
-        if not doppelt:
-            if item.text().strip() == "":
-                mb = QMessageBox(QMessageBox.Icon.Question, "Hinweis von SignoGDT", "Soll der Dokumenttyp " + self.dokumenttypen[currentRow].getName() + " wirklich entfernt werden?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-                mb.setDefaultButton(QMessageBox.StandardButton.No)
-                mb.button(QMessageBox.StandardButton.Yes).setText("Ja")
-                mb.button(QMessageBox.StandardButton.No).setText("Nein")
-                if mb.exec() == QMessageBox.StandardButton.Yes:
-                    self.listWidgetDokumenttypen.takeItem(currentRow)
-                    self.dokumenttypen.pop(currentRow)
-                    if self.listWidgetDokumenttypen.count() > 0:
-                        if self.listWidgetDokumenttypen.count() == 1:
-                            self.listWidgetDokumenttypen.setCurrentRow(0)
-                        else:
-                            self.listWidgetDokumenttypen.setCurrentRow(currentRow)
-                    self.aktualisiereFormular()
-                else:
-                    self.listWidgetDokumenttypen.item(currentRow).setText(self.dokumenttypen[currentRow].getName())
-            else:
-                self.dokumenttypen[currentRow].name = item.text()
 
     def lineEditDateipfadeEditingFinished(self, dateipfadNr:int):
         if self.listWidgetDokumenttypen.count() > 0:
@@ -834,9 +869,9 @@ if getDokumenttypAusArgs() != "":
     if gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(ci_lizenzschluessel, ci_lanr, gdttoolsL.SoftwareId.SIGNOGDT) or (gdttoolsL.GdtToolsLizenzschluessel.lizenzErteilt(ci_lizenzschluessel, ci_lanr, gdttoolsL.SoftwareId.SIGNOGDTPSEUDO) and patId != ""):
         gesuchterDokumenttypname = getDokumenttypAusArgs()
         if gesuchterDokumenttypname == "auswahl":
-            dda = dialogDokumenttypAuswaehlen.DokumenttypAuswaehlen(updateSafePath)
+            dda = dialogDokumenttypAuswaehlen.DokumenttypAuswaehlen(updateSafePath, ci_pfad)
             if dda.exec() == 1:
-                gesuchterDokumenttypname = dda.comboBoxDokumenttypen.currentText()
+                gesuchterDokumenttypname = dda.lineEditAusgewaehlt.text() # Kategorie_Name
             else:
                 tray.hide()
                 sys.exit()
@@ -867,7 +902,7 @@ if getDokumenttypAusArgs() != "":
                             verfuegbareVariablen[feldkennung] = gd.getInhalt(feldkennung)
                     dokumenttypen = class_dokumenttyp.getAlleDokumenttypen(os.path.join(updateSafePath, "dokumenttypen.xml"))
                     for dokumenttyp in dokumenttypen:
-                        if dokumenttyp.name == gesuchterDokumenttypname:
+                        if dokumenttyp.getSignoSignName() == gesuchterDokumenttypname:
                             dokumenttypName = dokumenttyp.getName()
                             logger.logger.info("Argument " + dokumenttypName + " in dokumenttypen.xml gefunden")
                             variablenErsetzt = []
@@ -879,7 +914,7 @@ if getDokumenttypAusArgs() != "":
                                     else:
                                         tempVariableErsetzt = tempVariableErsetzt.replace("${" + verfuegbareVariable + "}", verfuegbareVariablen[verfuegbareVariable])
                                 variablenErsetzt.append(tempVariableErsetzt)
-                            values = class_smlDatei.Values(dokumenttyp.name, variablenErsetzt)
+                            values = class_smlDatei.Values(dokumenttyp.getSignoSignName(), variablenErsetzt)
                             op = class_smlDatei.Open(dokumenttyp.getDateipfade(), values)
                             openElement = op.getXml()
                             sd = class_smlDatei.SmlDatei([op.getXml()], ci_deleteafteropen)

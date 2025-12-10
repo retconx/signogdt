@@ -9,7 +9,7 @@ else:
     if len(logListe) > 5:
         os.remove(os.path.join(basedir, "log", logListe[0]))
 datum = datetime.datetime.strftime(datetime.datetime.today(), "%Y%m%d")
-logHandler = logging.FileHandler(os.path.join(basedir, "log", datum + "signo.log"), mode="a", encoding="utf_8")
+logHandler = logging.FileHandler(os.path.join(basedir, "log", datum + "_signo.log"), mode="a", encoding="utf_8")
 logLevel = logging.WARNING
 logForm = logging.Formatter("{asctime} {levelname:8}: {message}", "%d.%m.%Y %H:%M:%S", "{")
 for arg in sys.argv:

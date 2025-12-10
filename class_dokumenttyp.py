@@ -11,14 +11,16 @@ class DokumenttypFehlerException(Exception):
         return "Dokumenttyp-Fehler: " + self.Meldung
 
 class Dokumenttyp:
-    def __init__(self, name:str, dateipfade:list, variablen:list):
+    def __init__(self, name:str, kategorie:str, dateipfade:list, variablen:list):
         self.name = name
+        self.kategorie = kategorie
         self.dateipfade = dateipfade
         self.variablen = variablen
 
     def getXml(self):
         dokumenttypElement = ElementTree.Element("dokumenttyp")
         dokumenttypElement.set("name", self.name)
+        dokumenttypElement.set("kategorie", self.kategorie)
         dateipfadeElement = ElementTree.Element("dateipfade")
         for dateipfad in self.dateipfade:
             if dateipfad != "":
@@ -42,6 +44,30 @@ class Dokumenttyp:
         """
         return self.name
     
+    def setName(self, name):
+        """
+        Setzt den Namen des Dokumenttyps
+        Parameter:
+            name:str
+        """
+        self.name = name
+    
+    def getKategorie(self):
+        """
+        Gibt die Kategorie zurück
+        Return:
+            Kategorie:str
+        """
+        return self.kategorie
+    
+    def setKategorie(self, kategorie):
+        """
+        Setzt den Namen des Dokumenttyps
+        Parameter:
+            kategorie:str
+        """
+        self.kategorie = kategorie
+    
     def getDateipfade(self):
         """
         Gib eine Liste der Dateipfade zurück
@@ -52,11 +78,22 @@ class Dokumenttyp:
     
     def getVariablen(self):
         """
-        Gib eine Liste der Variablen zurück
+        Gibt eine Liste der Variablen zurück
         Return:
             Variablen:Variable-Liste
         """
         return self.variablen
+    
+    def getSignoSignName(self):
+        """
+        Gibt den an SignoSign zu übergebenden Namen des Dokumenttyps zurück
+        Return:
+            Kategorie_Name bzw. Name, falls Kategorie =. Standard:str
+        """
+        if self.kategorie == "Standard":
+            return self.name
+        return self.kategorie + "_" + self.name
+    
 @staticmethod
 def getAlleDokumenttypen(pfad:str):
     """
@@ -74,7 +111,10 @@ def getAlleDokumenttypen(pfad:str):
         dokumenttypenRoot = tree.getroot()
         for dokumenttypElement in dokumenttypenRoot:
             name = str(dokumenttypElement.get("name"))
-            gdtid = str(dokumenttypElement.get("gdtid"))
+            # gdtid = str(dokumenttypElement.get("gdtid"))
+            kategorie = "Standard"
+            if dokumenttypElement.get("kategorie") != None:
+                kategorie = str(dokumenttypElement.get("kategorie"))
             dateipfade.clear()
             dateipfadeElement = dokumenttypElement.find("dateipfade")
             for dateipfadElement in dateipfadeElement.findall("dateipfad"): # type: ignore
@@ -89,7 +129,7 @@ def getAlleDokumenttypen(pfad:str):
                 if inhalt == "None":
                     inhalt = ""
                 variablen.append(inhalt)
-            dokumenttypen.append(Dokumenttyp(name, dateipfade.copy(), variablen.copy()))
+            dokumenttypen.append(Dokumenttyp(name, kategorie, dateipfade.copy(), variablen.copy()))
         return dokumenttypen
     else:
         raise DokumenttypFehlerException(pfad + " existiert nicht")

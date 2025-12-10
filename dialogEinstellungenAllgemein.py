@@ -10,7 +10,8 @@ from PySide6.QtWidgets import (
     QPushButton,
     QFileDialog,
     QCheckBox,
-    QGroupBox, 
+    QGroupBox,
+    QComboBox,
     QMessageBox
 )
 
@@ -23,7 +24,7 @@ class EinstellungenAllgemein(QDialog):
         self.fontBold = QFont()
         self.fontBold.setBold(True)
 
-        #config.ini lesen
+        # config.ini lesen
         configIni = configparser.ConfigParser()
         configIni.read(os.path.join(configPath, "config.ini"))
         self.signoSignPfad = configIni["Allgemein"]["signosignpfad"]
@@ -33,6 +34,8 @@ class EinstellungenAllgemein(QDialog):
         self.backupverzeichnis = configIni["Allgemein"]["backupverzeichnis"]
         self.autoupdate = configIni["Allgemein"]["autoupdate"] == "True"
         self.updaterpfad = configIni["Allgemein"]["updaterpfad"]
+        self.dokumenttypkategorien = str.split(configIni["Allgemein"]["dokumenttypkategorien"], "::")
+        self.dokumenttypkategorien.sort()
         self.setWindowTitle("Allgemeine Einstellungen")
         self.buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setText("Abbrechen")
@@ -66,6 +69,20 @@ class EinstellungenAllgemein(QDialog):
         labelArchivierungsname.setFont(self.fontNormal)
         self.lineEditArchivierungsname = QLineEdit(self.signoSignArchivierungsname)
         self.lineEditArchivierungsname.setFont(self.fontNormal)
+        labelDokumenttypKategorien = QLabel("Dokumenttyp-Kategorien:")
+        labelDokumenttypKategorien.setFont(self.fontNormal)
+        self.comboBoxDokumenttypKategorien = QComboBox()
+        self.comboBoxDokumenttypKategorien.setFont(self.fontNormal)
+        self.comboBoxDokumenttypKategorien.addItems(self.dokumenttypkategorien)
+        self.comboBoxDokumenttypKategorien.currentIndexChanged.connect(self.comboBoxDokumenttypKategorienChanged)
+        self.lineEditKategorieHinzufuegen = QLineEdit()
+        self.lineEditKategorieHinzufuegen.setFont(self.fontNormal)
+        self.pushButtonKategorieHinzufuegen = QPushButton("Kategorie hinzufügen")
+        self.pushButtonKategorieHinzufuegen.setFont(self.fontNormal)
+        self.pushButtonKategorieHinzufuegen.clicked.connect(self.pushButtonKategorieHinzufuegenClicked)
+        self.pushButtonKategorieEntfernen = QPushButton("Ausgewählte Kategorie entfernen")
+        self.pushButtonKategorieEntfernen.setFont(self.fontNormal)
+        self.pushButtonKategorieEntfernen.clicked.connect(self.pushButtonKategorieEntfernenClicked)
         dialogLayoutGroupboxSignoSignG.addWidget(labelSignoSignPfad, 0, 0, 1, 2)
         dialogLayoutGroupboxSignoSignG.addWidget(self.lineEditSignoSignPfad, 1, 0, 1, 1)
         dialogLayoutGroupboxSignoSignG.addWidget(self.pushButtonSignoSignPfadDurchsuchen, 1, 1, 1, 1)
@@ -74,6 +91,11 @@ class EinstellungenAllgemein(QDialog):
         dialogLayoutGroupboxSignoSignG.addWidget(self.pushButtonSignoSignArchivverzeichnisDurchsuchen, 3, 1, 1, 1)
         dialogLayoutGroupboxSignoSignG.addWidget(labelArchivierungsname, 4, 0, 1, 2)
         dialogLayoutGroupboxSignoSignG.addWidget(self.lineEditArchivierungsname, 5, 0, 1, 2)
+        dialogLayoutGroupboxSignoSignG.addWidget(labelDokumenttypKategorien, 6, 0, 1, 2)
+        dialogLayoutGroupboxSignoSignG.addWidget(self.comboBoxDokumenttypKategorien, 7, 0, 1, 2)
+        dialogLayoutGroupboxSignoSignG.addWidget(self.lineEditKategorieHinzufuegen, 8, 0, 1, 1)
+        dialogLayoutGroupboxSignoSignG.addWidget(self.pushButtonKategorieHinzufuegen, 8, 1, 1, 1)
+        dialogLayoutGroupboxSignoSignG.addWidget(self.pushButtonKategorieEntfernen, 9, 0, 1, 1)
 
         # GroupBox SignoGDT
         groupBoxSignoGdt = QGroupBox("SignoGDT")
@@ -184,6 +206,39 @@ class EinstellungenAllgemein(QDialog):
             self.lineEditUpdaterPfad.setText(os.path.abspath(fd.selectedFiles()[0]))
             self.lineEditUpdaterPfad.setToolTip(os.path.abspath(fd.selectedFiles()[0]))
             self.lineEditUpdaterPfad.setStyleSheet("background:rgb(255,255,255)")
+
+    def comboBoxDokumenttypKategorienChanged(self):
+        if self.comboBoxDokumenttypKategorien.currentText() == "Standard":
+            self.pushButtonKategorieEntfernen.setEnabled(False)
+        else:
+            self.pushButtonKategorieEntfernen.setEnabled(True)
+     
+    def pushButtonKategorieHinzufuegenClicked(self):
+        cbTexte = []
+        for i in range(self.comboBoxDokumenttypKategorien.count()):
+            cbTexte.append(self.comboBoxDokumenttypKategorien.itemText(i))
+        if not self.lineEditKategorieHinzufuegen.text() in cbTexte and self.lineEditKategorieHinzufuegen.text().strip() != "":
+            self.comboBoxDokumenttypKategorien.addItem(self.lineEditKategorieHinzufuegen.text())
+            self.comboBoxDokumenttypKategorien.setCurrentText(self.lineEditKategorieHinzufuegen.text())
+            self.lineEditKategorieHinzufuegen.setText("")
+        elif self.lineEditKategorieHinzufuegen.text().strip() == "":
+            mb = QMessageBox(QMessageBox.Icon.Information, "Hinweis von SignoGDT", "Bitte tragen Sie eine neue Kategorie ein.", QMessageBox.StandardButton.Ok)
+            mb.exec()
+            self.lineEditKategorieHinzufuegen.setFocus()
+        else:
+            mb = QMessageBox(QMessageBox.Icon.Information, "Hinweis von SignoGDT", "Die Kategorie \"" + self.lineEditKategorieHinzufuegen.text() + "\" existiert bereits.", QMessageBox.StandardButton.Ok)
+            mb.exec()
+            self.lineEditKategorieHinzufuegen.setFocus()
+            self.lineEditKategorieHinzufuegen.selectAll()
+    
+    def pushButtonKategorieEntfernenClicked(self):
+        mb = QMessageBox(QMessageBox.Icon.Question, "Hinweis von SignoGDT", "Soll die Kategorie \"" + self.comboBoxDokumenttypKategorien.currentText() + "\" entfernt werden?\nDokumenttypen, die dieser Kategorie zugeordnet sind, werden dadurch der Kategorie\"Standard\" zugeordnet.", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        mb.setDefaultButton(QMessageBox.StandardButton.No)
+        mb.button(QMessageBox.StandardButton.Yes).setText("Ja")
+        mb.button(QMessageBox.StandardButton.No).setText("Nein")
+        if mb.exec() == QMessageBox.StandardButton.Yes:
+            self.comboBoxDokumenttypKategorien.removeItem(self.comboBoxDokumenttypKategorien.currentIndex())
+            self.comboBoxDokumenttypKategorien.setCurrentText("Standard")
 
     def accept(self):
         if self.lineEditArchivierungsname.text()[-4:] == ".pdf":
