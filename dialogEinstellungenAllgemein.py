@@ -1,4 +1,4 @@
-import configparser, os, sys
+import configparser, os, sys, re
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QDialogButtonBox,
@@ -35,6 +35,8 @@ class EinstellungenAllgemein(QDialog):
         self.autoupdate = configIni["Allgemein"]["autoupdate"] == "True"
         self.updaterpfad = configIni["Allgemein"]["updaterpfad"]
         self.dokumenttypkategorien = str.split(configIni["Allgemein"]["dokumenttypkategorien"], "::")
+        self.alteBackupdateienLoeschen = configIni["Allgemein"]["altebackupdateienloeschen"] == "True"
+        self.alteBackupdateienLoeschenTage = int(configIni["Allgemein"]["altebackupdateienloeschentage"])
         self.dokumenttypkategorien.sort()
         self.setWindowTitle("Allgemeine Einstellungen")
         self.buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -109,12 +111,24 @@ class EinstellungenAllgemein(QDialog):
         self.pushButtonBackupverzeichnisDurchsuchen = QPushButton("...")
         self.pushButtonBackupverzeichnisDurchsuchen.setFont(self.fontNormal)
         self.pushButtonBackupverzeichnisDurchsuchen.clicked.connect(self.pushButtonBackupverzeichnisDurchsuchenClicked)
+        self.checkBoxAlteBackupDateienLoeschen = QCheckBox("Backup-Dateien löschen, wenn älter als")
+        self.checkBoxAlteBackupDateienLoeschen.setFont(self.fontNormal)
+        self.checkBoxAlteBackupDateienLoeschen.setChecked(self.alteBackupdateienLoeschen)
+        self.checkBoxAlteBackupDateienLoeschen.clicked.connect(self.checkBoxAlteBackupDateienLoeschenClicked)
+        self.lineEditBackupDateienLoeschenTage = QLineEdit(str(self.alteBackupdateienLoeschenTage))
+        self.lineEditBackupDateienLoeschenTage.setFont(self.fontNormal)
+        self.lineEditBackupDateienLoeschenTage.setEnabled(self.checkBoxAlteBackupDateienLoeschen.isChecked())
+        labelalteBackupDateienLoeschen_2 = QLabel("Tage")
+        labelalteBackupDateienLoeschen_2.setFont(self.fontNormal)
         self.checkBoxDeleteAfterOpen = QCheckBox("SML-Datei nach Einlesen löschen")
         self.checkBoxDeleteAfterOpen.setChecked(self.deleteAfterOpen)
         self.checkBoxDeleteAfterOpen.setFont(self.fontNormal)
-        dialogLayoutGroupboxSignoGdtG.addWidget(labelBackupverzeichnis, 0, 0, 1, 2)
+        dialogLayoutGroupboxSignoGdtG.addWidget(labelBackupverzeichnis, 0, 0, 1, 3)
         dialogLayoutGroupboxSignoGdtG.addWidget(self.lineEditBackupverzeichnis, 1, 0, 1, 1)
-        dialogLayoutGroupboxSignoGdtG.addWidget(self.pushButtonBackupverzeichnisDurchsuchen, 1, 1, 1, 1)
+        dialogLayoutGroupboxSignoGdtG.addWidget(self.pushButtonBackupverzeichnisDurchsuchen, 1, 1, 1, 2)
+        dialogLayoutGroupboxSignoGdtG.addWidget(self.checkBoxAlteBackupDateienLoeschen, 2, 0, 1, 1)
+        dialogLayoutGroupboxSignoGdtG.addWidget(self.lineEditBackupDateienLoeschenTage, 2, 1, 1, 1)
+        dialogLayoutGroupboxSignoGdtG.addWidget(labelalteBackupDateienLoeschen_2, 2, 2, 1, 1)
         dialogLayoutGroupboxSignoGdtG.addWidget(self.checkBoxDeleteAfterOpen)
 
         # GroupBox Updates
@@ -188,6 +202,9 @@ class EinstellungenAllgemein(QDialog):
             self.lineEditBackupverzeichnis.setText(os.path.abspath(fd.directory().path()))
             self.lineEditBackupverzeichnis.setToolTip(os.path.abspath(fd.directory().path()))
             self.backupverzeichnis = os.path.abspath(fd.directory().path())
+
+    def checkBoxAlteBackupDateienLoeschenClicked(self):
+        self.lineEditBackupDateienLoeschenTage.setEnabled(self.checkBoxAlteBackupDateienLoeschen.isChecked())
     
     def pushButtonUpdaterPfadClicked(self):
         fd = QFileDialog(self)
@@ -243,4 +260,11 @@ class EinstellungenAllgemein(QDialog):
     def accept(self):
         if self.lineEditArchivierungsname.text()[-4:] == ".pdf":
             self.lineEditArchivierungsname.setText(self.lineEditArchivierungsname.text()[:-4])
-        self.done(1)
+        patternGanzzahl = r"^\d+$"
+        if re.match(patternGanzzahl, self.lineEditBackupDateienLoeschenTage.text()) == None:
+            mb = QMessageBox(QMessageBox.Icon.Information, "Hinweis von SignoGDT", "Das Alter der Backup-Dateien muss eine ganzzahlige Tageszahl sein.", QMessageBox.StandardButton.Ok)
+            self.lineEditBackupDateienLoeschenTage.setFocus()
+            self.lineEditBackupDateienLoeschenTage.selectAll()
+            mb.exec()
+        else:
+            self.done(1)

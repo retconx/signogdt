@@ -1,10 +1,10 @@
-import sys, configparser, os, datetime, shutil, logger, time, subprocess, re, atexit
+import sys, configparser, os, time, datetime, shutil, logger, time, subprocess, re, atexit
 import xml.etree.ElementTree as ElementTree
 import gdt, class_dokumenttyp, class_smlDatei
 ## Nur mit Lizenz
 import gdttoolsL
 ## /Nur mit Lizenz
-import dialogEinstellungenGdt, dialogEinstellungenGdt, dialogEinstellungenLanrLizenzschluessel, dialogUeberSignoGdt, dialogEinstellungenAllgemein, dialogDokumenttypHinzufuegenBearbeiten, dialogWarten, dialogEula, dialogDokumenttypAuswaehlen
+import dialogEinstellungenGdt, dialogEinstellungenGdt, dialogEinstellungenLanrLizenzschluessel, dialogUeberSignoGdt, dialogEinstellungenAllgemein, dialogDokumenttypHinzufuegenBearbeiten, dialogWarten, dialogEula, dialogDokumenttypAuswaehlen, dialogBackupVerzeichnisBereinigen
 from PySide6.QtCore import Qt, QTranslator, QLibraryInfo,QFileSystemWatcher
 from PySide6.QtGui import QFont, QAction, QIcon, QDesktopServices
 from PySide6.QtWidgets import (
@@ -124,6 +124,7 @@ class MainWindow(QMainWindow):
             self.dokumenttypKategorien = str.split(configIni["Allgemein"]["dokumenttypkategorien"], "::")
         if configIni.has_option("Allgemein", "maximalekategoriespalten"):
             self.maximaleKategoriespalten = int(configIni["Allgemein"]["maximalekategoriespalten"])
+        
         # /Nachträglich hinzufefügte Options
 
         ## Nur mit Lizenz
@@ -187,6 +188,8 @@ class MainWindow(QMainWindow):
                     configIni["Allgemein"]["dokumenttypkategorien"] = "Standard"
                 if not configIni.has_option("Allgemein", "maximalekategoriespalten"):
                     configIni["Allgemein"]["maximalekategoriespalten"] = "5"
+                # 1.5.1 -> 1.6.0
+                # Siehe unten (config.ini lesen)
                 # /config.ini aktualisieren
 
                 with open(os.path.join(ci_pfad, "config.ini"), "w") as configfile:
@@ -511,6 +514,8 @@ class MainWindow(QMainWindow):
             configIni["Allgemein"]["signosignarchivverzeichnis"] = de.lineEditArchivverzeichnis.text()
             configIni["Allgemein"]["signosignarchivierungsname"] = de.lineEditArchivierungsname.text()
             configIni["Allgemein"]["backupverzeichnis"] = de.lineEditBackupverzeichnis.text()
+            configIni["Allgemein"]["altebackupdateienloeschen"] = str(de.checkBoxAlteBackupDateienLoeschen.isChecked())
+            configIni["Allgemein"]["altebackupdateienloeschentage"] = de.lineEditBackupDateienLoeschenTage.text()
             configIni["Allgemein"]["updaterpfad"] = de.lineEditUpdaterPfad.text()
             configIni["Allgemein"]["autoupdate"] = str(de.checkBoxAutoUpdate.isChecked())
             dtk = []
@@ -745,7 +750,8 @@ def fswDirectoryChanged(pfad, patId:str, wartenDialog:QDialog, fsw:QFileSystemWa
         logger.logger.info("Name in files: " + file)
         if file == ci_signoSignArchivierungsname + ".pdf":
             logger.logger.info("PDF-Datei " + file + " gefunden")
-            backup = shutil.copy(os.path.join(ci_signoSignArchivverzeichnis, ci_signoSignArchivierungsname + ".pdf"), os.path.join(ci_backupverzeichnis, datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d_%H%M%S_") + ci_signoSignArchivierungsname + ".pdf"))
+            backupPfad = os.path.join(ci_backupverzeichnis, datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d_%H%M%S_") + ci_signoSignArchivierungsname + ".pdf")
+            backup = shutil.copy(os.path.join(ci_signoSignArchivverzeichnis, ci_signoSignArchivierungsname + ".pdf"), backupPfad)
             logger.logger.info("PDF-Datei nach " + backup + " kopiert")
             kopieFuerPvs = shutil.copy(os.path.join(ci_signoSignArchivverzeichnis, ci_signoSignArchivierungsname + ".pdf"), os.path.join(updateSafePath, ci_signoSignArchivierungsname + ".pdf"))
             logger.logger.info("PDF-Datei für PVS-Import nach " + kopieFuerPvs + " kopiert")
@@ -858,6 +864,45 @@ elif z == "3":
 ci_lanr = configIni["Erweiterungen"]["lanr"]
 ci_lizenzschluessel = gdttoolsL.GdtToolsLizenzschluessel.dekrypt(configIni["Erweiterungen"]["lizenzschluessel"])
 dokumenttypName = ""
+
+# Backup-Bereinigungsfunktion vorhanden (1.5.1 -> 1.6.0
+if configIni.has_option("Allgemein", "altebackupdateienloeschen"):
+    ci_alteBackupDateienLoeschen = configIni["Allgemein"]["altebackupdateienloeschen"] == "True"
+    ci_alteBackupDateienLoeschenTage = int(configIni["Allgemein"]["altebackupdateienloeschentage"])
+else:
+    configIni["Allgemein"]["altebackupdateienloeschen"] = "False"
+    configIni["Allgemein"]["altebackupdateienloeschentage"] = "180"
+    ci_alteBackupDateienLoeschen = configIni["Allgemein"]["altebackupdateienloeschen"] == "True"
+    ci_alteBackupDateienLoeschenTage = int(configIni["Allgemein"]["altebackupdateienloeschentage"])
+
+# Backup-Verzeichnis bereinigen (ab 1.6.0)
+
+if ci_alteBackupDateienLoeschen:
+    dbvb = None
+    try:
+        if (os.path.exists(ci_backupverzeichnis)):
+            backupdateien = os.listdir(ci_backupverzeichnis)
+            jetzt = time.time()
+            for backupdatei in backupdateien:
+                sekunden = os.stat(os.path.join(ci_backupverzeichnis, backupdatei)).st_mtime
+                diff = jetzt - sekunden
+                tage = diff / 3600 / 24
+                if (tage > ci_alteBackupDateienLoeschenTage):
+                    if dbvb == None:
+                        dbvb = dialogBackupVerzeichnisBereinigen.BackupVerzeichnisBereinigen()
+                        logger.logger.info("Bereinigungs-Splashscreen instanziert")
+                    try:
+                        dateiPfad = os.path.join(ci_backupverzeichnis, backupdatei)
+                        os.remove(dateiPfad)
+                        logger.logger.info("Backupdatei " + dateiPfad +  " gelöscht (" + str(tage) + " Tage alt)")
+                    except:
+                       logger.logger.error("Fehler beim Löschen der Backupdatei " + dateiPfad)
+        else:
+            logger.logger.warning("Backup-Verzeichnis " + ci_backupverzeichnis + " existiert nicht")
+    except Exception as e:
+        logger.logger.error("Fehler bei der Bereinigung des Backup-Verzeichnisses: " + str(e))
+    if dbvb != None:
+        dbvb.close()
 
 # Programmstart mit Dokumenttyp als Argument?
 if getDokumenttypAusArgs() != "":
